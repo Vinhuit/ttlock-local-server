@@ -95,13 +95,42 @@ class TTLockLocalOptionsFlow(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        errors: dict[str, str] = {}
+
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            validation_data = {
+                CONF_NAME: user_input.get(CONF_NAME, self.config_entry.data.get(CONF_NAME, DEFAULT_NAME)),
+                CONF_HOST: user_input[CONF_HOST],
+                CONF_PORT: user_input[CONF_PORT],
+                CONF_POLL_INTERVAL: user_input[CONF_POLL_INTERVAL],
+            }
+            try:
+                await validate_input(self.hass, validation_data)
+            except TTLockLocalApiError:
+                errors["base"] = "cannot_connect"
+            except Exception:
+                errors["base"] = "unknown"
+            else:
+                return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_HOST,
+                        default=self.config_entry.options.get(
+                            CONF_HOST,
+                            self.config_entry.data.get(CONF_HOST, DEFAULT_HOST),
+                        ),
+                    ): str,
+                    vol.Required(
+                        CONF_PORT,
+                        default=self.config_entry.options.get(
+                            CONF_PORT,
+                            self.config_entry.data.get(CONF_PORT, DEFAULT_PORT),
+                        ),
+                    ): int,
                     vol.Required(
                         CONF_POLL_INTERVAL,
                         default=self.config_entry.options.get(
@@ -111,4 +140,5 @@ class TTLockLocalOptionsFlow(config_entries.OptionsFlow):
                     ): vol.All(int, vol.Range(min=3, max=300)),
                 }
             ),
+            errors=errors,
         )

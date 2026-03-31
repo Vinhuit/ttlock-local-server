@@ -20,6 +20,11 @@ from .const import (
 from .coordinator import TTLockLocalCoordinator
 
 
+def _entry_value(entry: ConfigEntry, key: str):
+    """Return option override or fallback to config entry data."""
+    return entry.options.get(key, entry.data[key])
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the TTLock Local integration."""
     hass.data.setdefault(DOMAIN, {})
@@ -55,8 +60,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN].setdefault(DATA_LOGGER, logging.getLogger(__name__))
 
     session = async_get_clientsession(hass)
-    api = TTLockLocalApiClient(session, entry.data["host"], entry.data["port"])
-    coordinator = TTLockLocalCoordinator(hass, api, entry.options.get(CONF_POLL_INTERVAL, entry.data[CONF_POLL_INTERVAL]))
+    api = TTLockLocalApiClient(session, _entry_value(entry, "host"), _entry_value(entry, "port"))
+    coordinator = TTLockLocalCoordinator(hass, api, _entry_value(entry, CONF_POLL_INTERVAL))
     await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = {
