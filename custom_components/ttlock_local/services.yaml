@@ -1,0 +1,7 @@
+refresh_monitor:
+  name: Refresh monitor
+  description: Ask the TTLock Local Web UI backend to refresh lock state.
+
+reconnect:
+  name: Reconnect active lock
+  description: Force reconnect the currently active lock in the TTLock Local Web UI backend.

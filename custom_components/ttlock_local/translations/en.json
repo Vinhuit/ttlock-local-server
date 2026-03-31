@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to TTLock Local Web UI",
+        "description": "Connect Home Assistant to the local TTLock Web UI/server.js backend.",
+        "data": {
+          "name": "Name",
+          "host": "Host",
+          "port": "Port",
+          "poll_interval": "Poll interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the TTLock Local Web UI",
+      "unknown": "Unexpected error"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TTLock Local options",
+        "data": {
+          "poll_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  }
+}
