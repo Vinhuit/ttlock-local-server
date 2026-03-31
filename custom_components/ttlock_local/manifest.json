@@ -5,12 +5,13 @@
     "@caube"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/kind3r/ttlock-sdk-js",
+  "documentation": "https://github.com/Vinhuit/ttlock-local-hass",
+  "issue_tracker": "https://github.com/Vinhuit/ttlock-local-hass/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
   "loggers": [
     "custom_components.ttlock_local"
   ],
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.1.2"
 }
