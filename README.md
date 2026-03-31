@@ -1,186 +1,416 @@
-# ttlock-sdk-js
+# TTLock Local / ttlock-sdk-js
 
-The goal of this project is to make a partial JavaScript port of the TTLock Android SDK enough to make it work with the biometric locks.  
+Local-first TTLock tooling built on top of an unofficial JavaScript port of the TTLock Android SDK.
 
-> This is just an SDK providing the means to communicate with the locks, it is not an app providing the full functionality of the TTLock app. If you are looking for an implementation please see [ttlock-hass-integration](https://github.com/kind3r/hass-addons) Home Assistant Addon.  
+This repository now serves three related purposes:
 
-> Bluetooth implementation is using [@abandonware/noble](https://github.com/abandonware/noble) but other implementations are possible by extending [ScannerInterface](./src/scanner/ScannerInterface.ts)  
+- a reusable JavaScript/TypeScript TTLock SDK
+- a local Web UI + HTTP backend powered by [`server.js`](./server.js)
+- integration pieces for Home Assistant and Android local control
 
-Feeling generous and want to support my work, here is [my PayPal link](https://paypal.me/kind3r).  
+Support the project:
+
+- Ko-fi: <https://ko-fi.com/vinh541542>
+
+## What This Repo Is
+
+TTLock Local is meant for users who want to control TTLock devices without depending entirely on the official cloud app flow.
+
+The local backend can:
+
+- scan and initialize locks
+- lock and unlock
+- read lock status
+- manage fingerprints
+- manage passcodes
+- manage passage mode
+- fetch operation logs
+- expose a simple local HTTP API for Web UI and Home Assistant
+
+## Main Components
+
+### 1. SDK
+
+The SDK lives in [`src`](./src) and provides the protocol implementation for TTLock V3 devices.
+
+Use this if you want to:
+
+- script TTLock operations yourself
+- build your own Node.js automation
+- extend support for more TTLock features
+
+### 2. Local Web UI + Backend
+
+The local backend is started with:
+
+- [`server.js`](./server.js)
+- [`monitor.js`](./monitor.js)
+
+The Web UI lives in:
+
+- [`public`](./public)
+
+This is the main local control surface for:
+
+- pairing / init
+- selecting locks
+- lock and unlock
+- fingerprints
+- passcodes
+- passage mode
+- activity / state
+
+### 3. Home Assistant
+
+The Home Assistant custom integration lives in:
+
+- [`custom_components/ttlock_local`](./custom_components/ttlock_local)
+
+It talks to the local Web UI backend over HTTP and creates Home Assistant entities from the backend state.
+
+## Current Feature Coverage
+
+Implemented in this repo:
+
+- discover locks
+- initialize and pair locks
+- reset to factory defaults
+- lock / unlock
+- get current lock status
+- set/get auto lock time
+- add/get/delete/clear passage mode
+- add/update/delete/clear passcodes
+- add/get/delete/clear fingerprints
+- add/get/clear IC cards
+- read operation logs
+- monitor lock advertising state and event bits
+- Web UI for local browser control
+- Docker packaging for backend deployment
+- Home Assistant custom integration
 
 ## Requirements
-- node.js v12 or newer
-- a bluetooth adapter on any platform* that [@abandonware/noble](https://github.com/abandonware/noble#installation) works on
 
-> *) It was tested on a Raspberry PI 3 running Debian and also under Home Assistant runing on an Intel NUC
+- Node.js 12 or newer
+- a working Bluetooth adapter
+- a platform supported by [`@abandonware/noble`](https://github.com/abandonware/noble)
 
-## Implemented features
-- [X] discover locks
-- [X] initialize (pair) locks
-- [X] reset to factory defaults
-- [X] lock
-- [X] unlock
-- [X] get lock/unlock status
-- [X] set/get autolock time
-- [X] add/edit/delete/clear passage mode
-- [X] add/edit/remove keyboard passwords (PIN codes)
-- [X] add/edit/remove fingerprints
-- [X] add/edit/remove IC Cards 
-- [X] get operation log
-- [X] detect lock/unlock events*
+Known good targets for this kind of setup:
 
-## Planned development
-- [ ] categorize and translate LogOperate
-- [ ] add some logger to separate debug events from normal ones
-- [ ] proper timezone support
-- [ ] cyclic based validity setup for credentials (ex.: Mo-Fr from 9AM to 5PM)
-- [ ] API documentation
+- Raspberry Pi
+- Linux mini PC
+- Intel NUC
+- another always-on local machine with BLE
 
-> *) See [Monitoring for lock/unlock events](#Monitoring-for-lock/unlock-events).
+## Quick Start
 
-## **Known issues and limitations**
-- Pairing the lock can sometimes fail. It is recommended to pair the lock before installing it on the door so you can use the button on the back to factory reset it.
-- BLE signal is generaly bad, at least combined with the PI 3. Sometimes commands fail because of this (presumption).
-- Editing validity intervals of fingerprints and IC Cards does not work. *Perhaps it is required to remove and re-add*.
-- Some commands always have a bad CRC (added option to auto-ignore bad CRC if all 3 retry attempts have the same result).
-- The SDK only works with locks that use the V3 protocol for communication.
+### Install dependencies
 
-## Gateway option
-
-The websocket binding present in [@abandonware/noble](https://github.com/abandonware/noble) was extended with a simple authentication via AES key, user and password. This adds basic suport for using a bluetooth adapter on a remote host via a simple websocket connection. The end goal will be to run an ESP32 as a gateway ([development ongoing](https://github.com/kind3r/esp32-ble-gateway)) to extend the range of the device the SDK is running on, or maybe just use it on a device that does not even have a bluetooth adapter. A sample server is implemented in [tools/server.js](./tools/server.js). All examples in the SKD can be started in websocket mode by adding the following environment variables:
-- `WEBSOCKET_DEBUG=1` - debug websocket messages
-- `WEBSOCKET_ENABLE=1` - this will enable websocket support
-- `WEBSOCKET_HOST=127.0.0.1` - the IP or hostname of the host running the server
-- `WEBSOCKET_PORT=2846` - the port the server is running on
-
-For example:
-```sh
-pi@raspberrypi:~/ttlock-sdk-js $ WEBSOCKET_ENABLE=1 WEBSOCKET_HOST=192.168.1.42 npm run get-cards
+```bash
+npm install
 ```
 
-## Debug options
+### Build the SDK
 
-- `TTLOCK_IGNORE_CRC=1` - Ignore CRC error on messages received from the lock
-- `TTLOCK_DEBUG_COMM=1` - Log raw lock communication messages  
- 
-
-## Sample usage of this SDK
-
-1. Clone the repo and install the dependencies `npm i`.
-2. Check the installation prerequisites for your OS on the [@abandonware/noble](https://github.com/abandonware/noble#installation) GitHub page. Make sure you also read the [Running without root/sudo (Linux-specific)](https://github.com/abandonware/noble#running-without-rootsudo-linux-specific) section for running without sudo.  
-
-The code for the followinng examples are located in the [examples](./examples) folder.
-
-### Initialisation
-
-`npm run init` - performs the initial pairing with the lock.
-
-The lock needs to be reset to factory defaults and it needs to be woke up by touching the keyboard. The lock stays alive for 10-15s and only in that interval it is discoverable so you need to time this right.
-
-> If the lock is woke up after the scan has started it won't be found.  
-
-> If the lock is woke up too early, it can go back to sleep before the init process is completed.  
-
-> The init script provides a countdown of 10 seconds, waking up the lock 5 seconds before the scan start proved to be most reliable. 
-
-After the initialisation is completed, the script ouputs the credentials for the lock into the `lockData.json` file. This file is used by the other scripts.
-
-**Sometimes the pairing process fails** for reasons that are not quite clear. The pairing process has to be repeated until it succedes. Possible causes of failure are:
-- the lock is too close to the PI
-- something wrong in the BLE library used
-- drivers
-
-In case the lock needs to be reseted to factory defaults, there is a switch on the back of the part that goes on the outside. Removing the metal cover will reveal this switch. Short pressing the switch will reboot the lock (one beep), long pressing for about 2-3 seconds will reset the lock to factory defaults (two beeps).
-
-### Lock/Unlock
-
-`npm run unlock` - unlock the lock  
-`npm run lock` - lock the lock
-
-Those 2 scripts read the lock credentials from `lockData.json` file generated by the init script, start searching for the lock and connect to it. Once the known lock is found and connected they perform the lock/unlock command. 
-
-Bu default, auto locking is set for 5 seconds. So after unlocking, it will auto lock back.
-
-### Lock status
-
-`npm run status` - returns the lock or unlock status  
-
-### Passage mode
-
-Passage mode disables autolock for the intervals you set. All unlock metods are now treated as toggle (lock/unlock) instead of just unlock and locking back after the autolock timeout. 
-
-`npm run set-passage` - sets passage mode for friday all day  
-`npm run get-passage` - gets the passage mode intervals  
-`npm run delete-passage` - deletes the passage mode for friday all day  
-`npm run clear-passage` - deletes all passage mode intervals
-
-### Reset to factory defaults
-
-`npm run reset` - resets the lock to factory defaults
-
-Performs a soft reset of the lock to factory data. The credentials file `lockData.json` is automatically updated and the reseted lock is removed.
-
-### Passcodes management
-
-Passcodes or keyboard passcodes or pin codes allow oppening the lock using a 4-8 digits code. The passcodes can be permanent, one time, or limited time. 
-
-`npm run add-passcode` - sets a permanent passcode **123456** available all the time  
-`npm run update-passcode` - updates the permanent passcode **123456** to **654321**  
-`npm run delete-passcode` - deletes the permanent passcode **654321**  
-`npm run clear-passcodes` - removes all passcodes  
-
-### IC Card management
-
-IC cards are scanned and their serial number is returned. You can then add validity intervals for that card serial number. Also works with credit cards. 
-
-`npm run add-card` - scans a card and adds a permanent validity  
-`npm run get-cards` - lists all the valid cards and their intervals  
-`npm run clear-cards` - removes all registered cards  
-
-### Fingerprint management
-
-Fingerprints are scanned mutiple times during the add process. After scanning you can add validity intervals for that fingerprint.
-
-`npm run add-fingerprint` - scans a fingerprint and adds a permanent validity (it will timeout after 8.5 seconds if you do not scan a finger)  
-`npm run get-fingerprints` - lists all valid fingerprints and their intervals  
-`npm run clear-fingerprints` - removes all registered fingerprints  
-
-### Lock sound
-
-Disable the anoying beeps.  
-
-`npm run delete-locksound`  
-
-### Operation log
-
-Get the log of operations from the lock (lock, unlock, add/edit/remove credentials etc.).
-
-`npm run get-operations`
-
-### Monitoring for lock/unlock events
-
-Detecting lock/unlock events is possible by using a passive scan and monitoring changes in `params byte` of the advertising data. 
-
+```bash
+npm run build
 ```
+
+### Start the local Web UI/backend
+
+```bash
+npm run webui
+```
+
+Default backend URL:
+
+```text
+http://localhost:8990
+```
+
+## Backend Files and Persistence
+
+Important backend files:
+
+- [`server.js`](./server.js)
+- [`monitor.js`](./monitor.js)
+- [`lockData.json`](./lockData.json)
+- `state.json`
+
+Runtime data:
+
+- `lockData.json`
+  - saved lock credentials and local cache
+- `state.json`
+  - runtime monitor state
+
+If you care about not losing keys, back up `lockData.json`.
+
+## Backend Environment Variables
+
+The current backend uses these environment variables:
+
+- `PORT`
+  - default: `8990`
+- `TTLOCK_WEBUI_IDLE_TIMEOUT_MS`
+  - default: `15000`
+- `BLE_HCI_DEVICE`
+  - convenience alias for `NOBLE_HCI_DEVICE_ID`
+- `NOBLE_HCI_DEVICE_ID`
+  - choose a BLE adapter
+
+Example:
+
+```bash
+PORT=8990 TTLOCK_WEBUI_IDLE_TIMEOUT_MS=30000 node server.js
+```
+
+## Test the Backend First
+
+Before debugging UI or Home Assistant, verify the backend directly.
+
+### Health
+
+```text
+GET /api/healthz
+```
+
+Expected:
+
+```json
+{ "ok": true }
+```
+
+### Status
+
+```text
+GET /api/status
+```
+
+### Wake + status
+
+```text
+GET /api/status?wake=1
+```
+
+If these fail, fix the backend first before touching Home Assistant.
+
+## Web UI API
+
+Current main routes exposed by [`server.js`](./server.js):
+
+- `GET /api/healthz`
+- `GET /api/status`
+- `POST /api/select-lock`
+- `POST /api/delete-lock`
+- `POST /api/init-scan/start`
+- `POST /api/init-scan/stop`
+- `POST /api/init-lock`
+- `POST /api/unlock`
+- `POST /api/lock`
+- `POST /api/refresh`
+- `POST /api/reconnect`
+- `POST /api/reset-lock`
+- `POST /api/get-fingerprints`
+- `POST /api/add-fingerprint`
+- `POST /api/delete-fingerprint`
+- `POST /api/cancel-fingerprint`
+- `POST /api/get-passcodes`
+- `POST /api/add-passcode`
+- `POST /api/delete-passcode`
+- `POST /api/get-passage`
+- `POST /api/set-passage`
+- `POST /api/delete-passage`
+- `POST /api/clear-passage`
+
+## Docker
+
+Docker support is included.
+
+See:
+
+- [`Dockerfile`](./Dockerfile)
+- [`DOCKER.md`](./DOCKER.md)
+
+### Build
+
+```bash
+docker build -t ttlock-local-webui:latest .
+```
+
+### Run
+
+```bash
+docker run --rm -it \
+  --name ttlock-local-webui \
+  --network host \
+  --privileged \
+  -e PORT=8990 \
+  -v ttlock_local_data:/data \
+  ttlock-local-webui:latest
+```
+
+Notes:
+
+- BLE in Docker usually needs `--privileged`
+- `--network host` is the simplest deployment
+- `/data` stores persistent files
+
+## Common CLI Examples
+
+These commands use the SDK examples in [`examples`](./examples).
+
+### Init / Pair
+
+```bash
+npm run init
+```
+
+### Lock / Unlock / Status
+
+```bash
+npm run unlock
+npm run lock
+npm run status
+```
+
+### Passage Mode
+
+```bash
+npm run set-passage
+npm run get-passage
+npm run delete-passage
+npm run clear-passage
+```
+
+### Passcodes
+
+```bash
+npm run add-passcode
+npm run update-passcode
+npm run delete-passcode
+npm run clear-passcodes
+npm run get-passcodes
+```
+
+### Fingerprints
+
+```bash
+npm run add-fingerprint
+npm run get-fingerprints
+npm run clear-fingerprints
+```
+
+### Cards
+
+```bash
+npm run add-card
+npm run add-card-batch
+npm run get-cards
+npm run clear-cards
+```
+
+### Other
+
+```bash
+npm run set-autolock
+npm run set-remoteunlock
+npm run delete-locksound
+npm run get-operations
+npm run listen
+```
+
+## Pairing Notes
+
+Pairing is the least stable part of the flow.
+
+For best results:
+
+- reset the lock to factory defaults first
+- wake the lock just before scanning
+- keep the BLE host close, but not pressed against the lock
+- if init fails, try again
+
+On many locks, a hardware reset button exists on the exterior assembly:
+
+- short press: reboot
+- long press: factory reset
+
+## Monitoring and Events
+
+The backend can monitor advertising data and infer state changes from the params byte.
+
+Relevant bits:
+
+```text
 0000 0000
 |||| ||||__ (  1) isUnlock
 |||| |||___ (  2) new operation log events
 |||| ||____ (  4) isSettingMode
 |||| |_____ (  8) isTouch
 ||||_______ ( 16) parkStatus
-|||________ ( 32) 
-||_________ ( 64) 
-|__________ (128) 
 ```
 
-This will tell us when new operation logs are available which we can fetch to (hopefully) figure out what happend. Unfortunatelly auto-lock events are not recorded in this log, so a combination of 'new operation' bit detection together with isUnlock bit has to be used. Also, because advertising packets are sent whenever the lock wants to send them, change detection is not realtime (still, within a maximum of 10s interval).
+This is useful for:
 
-`npm run listen`
+- detecting lock/unlock state changes
+- knowing when operation logs should be refreshed
+
+It is not perfect real-time telemetry, but it is enough for local monitoring workflows.
+
+## Home Assistant
+
+A HACS/custom integration is included in:
+
+- [`custom_components/ttlock_local`](./custom_components/ttlock_local)
+
+That integration does not embed BLE in Python. It expects the Node backend to already be running and reachable.
+
+Typical flow:
+
+1. run `server.js` on a BLE-capable host
+2. verify `http://<host>:8990/api/healthz`
+3. install the integration in Home Assistant
+4. connect Home Assistant to that backend
+
+## Debug Options
+
+- `TTLOCK_IGNORE_CRC=1`
+  - ignore CRC errors on messages from the lock
+- `TTLOCK_DEBUG_COMM=1`
+  - log raw communication
+- `WEBSOCKET_DEBUG=1`
+- `WEBSOCKET_ENABLE=1`
+- `WEBSOCKET_HOST=127.0.0.1`
+- `WEBSOCKET_PORT=2846`
+
+Example websocket mode:
+
+```bash
+WEBSOCKET_ENABLE=1 WEBSOCKET_HOST=192.168.1.42 npm run get-cards
+```
+
+## Known Issues
+
+- pairing can fail intermittently
+- BLE signal quality is often the main source of instability
+- some commands may show repeatable bad CRC that needs tolerant handling
+- some validity-edit flows are still incomplete or awkward
+- protocol coverage is focused on TTLock V3 devices
+
+## Development Status
+
+This repo is actively used as a practical local-control toolbox, not just a pure SDK snapshot.
+
+That means:
+
+- the SDK layer keeps evolving
+- the Web UI/backend may add routes and behavior
+- Android local control and Home Assistant support may move faster than polished docs
 
 ## Credits
 
-- [Valentino Stillhardt (@Fusseldieb)](https://github.com/Fusseldieb) for initial protocol analysis and providing remote access to his lock
+- [Valentino Stillhardt (@Fusseldieb)](https://github.com/Fusseldieb) for initial protocol analysis and remote testing support
 
 ## License
 
-[GPL-3.0](LICENSE)
+[GPL-3.0](./LICENSE)

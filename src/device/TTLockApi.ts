@@ -296,6 +296,7 @@ export abstract class TTLockApi extends EventEmitter {
       responseEnvelope.setAesKey(aesKey);
       const cmd = responseEnvelope.getCommand() as AudioManageCommand;
       if (cmd.getResponse() != CommandResponse.SUCCESS) {
+        console.error("AudioManage response code:", cmd.getResponse());
         throw new Error("Failed to set audio mode");
       }
       this.batteryCapacity = cmd.getBatteryCapacity();
@@ -618,12 +619,17 @@ export abstract class TTLockApi extends EventEmitter {
     const requestEnvelope = CommandEnvelope.createFromLockType(this.device.lockType, aesKey);
     requestEnvelope.setCommandType(CommandType.COMM_CHECK_RANDOM);
     let cmd = requestEnvelope.getCommand() as CheckRandomCommand;
+    const sum = psFromLock + this.privateData.admin.unlockKey;
+    if (process.env.TTLOCK_DEBUG_COMM == "1") {
+      console.log("checkRandom sum:", sum, "(ps:", psFromLock, "+ unlockKey:", this.privateData.admin.unlockKey, ")");
+    }
     cmd.setSum(psFromLock, this.privateData.admin.unlockKey);
     const responseEnvelope = await this.device.sendCommand(requestEnvelope);
     if (responseEnvelope) {
       responseEnvelope.setAesKey(aesKey);
       cmd = responseEnvelope.getCommand() as CheckRandomCommand;
       if (cmd.getResponse() != CommandResponse.SUCCESS) {
+        console.error("checkRandom response code:", cmd.getResponse());
         throw new Error("Failed checkRandom response");
       }
     } else {
