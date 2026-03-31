@@ -1,5 +1,11 @@
 # TTLock Local / ttlock-sdk-js
 
+[![Node.js](https://img.shields.io/badge/Node.js-12%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](./LICENSE)
+[![Backend](https://img.shields.io/badge/Backend-server.js-111827)](./server.js)
+[![Docker](https://img.shields.io/badge/Docker-supported-2496ED?logo=docker&logoColor=white)](./DOCKER.md)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-custom__component-41BDF5?logo=homeassistant&logoColor=white)](./custom_components/ttlock_local)
+
 Local-first TTLock tooling built on top of an unofficial JavaScript port of the TTLock Android SDK.
 
 This repository now serves three related purposes:
@@ -11,6 +17,16 @@ This repository now serves three related purposes:
 Support the project:
 
 - Ko-fi: <https://ko-fi.com/vinh541542>
+
+## At a Glance
+
+| Area | What it gives you |
+| --- | --- |
+| SDK | TTLock protocol implementation in TypeScript |
+| Web UI | local browser control for locks, fingerprints, passcodes, and pairing |
+| `server.js` | HTTP backend for the Web UI and Home Assistant |
+| Docker | backend deployment on a dedicated BLE host |
+| Home Assistant | entities driven by the local backend |
 
 ## What This Repo Is
 
@@ -194,33 +210,20 @@ GET /api/status?wake=1
 
 If these fail, fix the backend first before touching Home Assistant.
 
-## Web UI API
+## Server API
 
-Current main routes exposed by [`server.js`](./server.js):
+The server routes are documented in:
 
-- `GET /api/healthz`
-- `GET /api/status`
-- `POST /api/select-lock`
-- `POST /api/delete-lock`
-- `POST /api/init-scan/start`
-- `POST /api/init-scan/stop`
-- `POST /api/init-lock`
-- `POST /api/unlock`
-- `POST /api/lock`
-- `POST /api/refresh`
-- `POST /api/reconnect`
-- `POST /api/reset-lock`
-- `POST /api/get-fingerprints`
-- `POST /api/add-fingerprint`
-- `POST /api/delete-fingerprint`
-- `POST /api/cancel-fingerprint`
-- `POST /api/get-passcodes`
-- `POST /api/add-passcode`
-- `POST /api/delete-passcode`
-- `POST /api/get-passage`
-- `POST /api/set-passage`
-- `POST /api/delete-passage`
-- `POST /api/clear-passage`
+- [`API.md`](./API.md)
+
+Main route groups:
+
+- health and status
+- init / pair
+- lock actions
+- fingerprints
+- passcodes
+- passage mode
 
 ## Docker
 
@@ -371,6 +374,15 @@ Typical flow:
 2. verify `http://<host>:8990/api/healthz`
 3. install the integration in Home Assistant
 4. connect Home Assistant to that backend
+
+## Screenshots
+
+README is ready for screenshots, but I have not added static UI screenshots here yet because there is no clean checked-in Web UI / Android capture asset in the repo right now.
+
+When you have final screenshots, the best place is:
+
+- `docs/assets/webui-overview.png`
+- `docs/assets/android-control.png`
 
 ## Debug Options
 
