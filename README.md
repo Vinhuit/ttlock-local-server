@@ -1,195 +1,117 @@
-# TTLock Local for Home Assistant
+# TTLock Local Server
 
 <p align="center">
-  <img src="custom_components/ttlock_local/brands/icon.png" alt="TTLock Local" width="120">
+  <strong>Local-first TTLock backend with Web UI, HTTP API, Docker support, and Linux BlueZ D-Bus BLE handling.</strong>
 </p>
 
-<p align="center"><strong>Local-first TTLock control for Home Assistant through a lightweight Node.js backend.</strong></p>
-
 <p align="center">
-  <a href="https://www.home-assistant.io/">
-    <img src="https://img.shields.io/badge/Home%20Assistant-2024.8.0%2B-41BDF5?logo=homeassistant&logoColor=white" alt="Home Assistant">
-  </a>
-  <a href="https://hacs.xyz/">
-    <img src="https://img.shields.io/badge/HACS-Custom%20Integration-41BDF5?logo=homeassistantcommunitystore&logoColor=white" alt="HACS">
-  </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg" alt="GPL-3.0">
   </a>
-  <a href="https://github.com/Vinhuit/ttlock-local-server">
-    <img src="https://img.shields.io/badge/Backend-ttlock--local--server-111827" alt="Backend repo">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Vinhuit/ttlock-local-server">
-    <img src="https://img.shields.io/badge/Server%20Repo-Setup%20Guide-0F172A" alt="Server repo">
-  </a>
-  <a href="https://github.com/Vinhuit/ttlock-local-server/blob/main/API.md">
-    <img src="https://img.shields.io/badge/Server%20API-Reference-2563EB" alt="API reference">
-  </a>
-  <a href="https://github.com/Vinhuit/ttlock-local-server/blob/main/DOCKER.md">
+  <a href="./DOCKER.md">
     <img src="https://img.shields.io/badge/Docker-Runbook-2496ED?logo=docker&logoColor=white" alt="Docker runbook">
   </a>
+  <a href="./API.md">
+    <img src="https://img.shields.io/badge/API-Reference-2563EB" alt="API reference">
+  </a>
+  <a href="https://github.com/Vinhuit/ttlock-local-hass">
+    <img src="https://img.shields.io/badge/Home%20Assistant-Separate%20Repo-41BDF5?logo=homeassistant&logoColor=white" alt="Home Assistant repo">
+  </a>
 </p>
 
-This repository is for the Home Assistant integration only.
+## Overview
 
-All BLE, pairing, Web UI, Docker, and `server.js` backend work lives in:
+This repository is the backend server only.
 
-- [`Vinhuit/ttlock-local-server`](https://github.com/Vinhuit/ttlock-local-server)
+It contains:
 
-## Highlights
+- Node.js TTLock local server
+- Web UI
+- local HTTP API
+- Docker/Linux runtime
+- Linux BLE transport using BlueZ D-Bus
 
-| Area | Included |
-| --- | --- |
-| Lock control | one `lock` entity per saved TTLock device |
-| Diagnostics | battery, RSSI, connected, last action, updated |
-| Helper actions | refresh monitor and reconnect buttons |
-| Transport | local HTTP to the backend, no direct BLE in Home Assistant |
-| Config | backend host, port, and poll interval are configurable |
+The Home Assistant custom integration lives in a separate repository:
 
-## How It Works
+- [`Vinhuit/ttlock-local-hass`](https://github.com/Vinhuit/ttlock-local-hass)
+
+This project is based on:
+
+- [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
+
+## Architecture
 
 ```text
-Home Assistant
-  -> custom_components/ttlock_local
-  -> HTTP
+Web UI / HTTP client
   -> ttlock-local-server
   -> BlueZ D-Bus / BLE
   -> TTLock device
 ```
 
-The integration does not speak Bluetooth directly.  
-It only reads backend state and sends local HTTP commands to the server.
+On Linux, the preferred BLE path is BlueZ D-Bus.
 
-On Linux, the backend architecture can use the BlueZ D-Bus path for BLE discovery and connect handling instead of relying only on the older `noble` flow.
+## Linux Only
 
-This Linux BLE architecture is intended for Linux hosts only.  
-If you want a Windows-oriented workflow, switch to the upstream project instead:
+This backend is currently Linux-first.
+
+The Docker and BlueZ D-Bus setup in this repository is intended for Linux hosts only.
+
+If you want a Windows-oriented workflow, use the upstream project instead:
 
 - [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
 
-## Requirements
+## What It Provides
 
-- Home Assistant `2024.8.0` or newer
-- a running backend from:
-  - [`ttlock-local-server`](https://github.com/Vinhuit/ttlock-local-server)
-- at least one saved or imported lock in the backend
+- local lock and unlock actions
+- live status, RSSI, battery, and last action state
+- browser Web UI
+- import/export of `lockData.json`
+- Docker runtime for Linux
+- D-Bus scanning and connect path for Linux BLE adapters
 
-## Install
+## Quick Start
 
-### HACS
+Run directly:
 
-1. Open HACS.
-2. Add this repository as a custom integration if needed.
-3. Install `TTLock Local`.
-4. Restart Home Assistant.
-
-### Manual
-
-Copy this folder into your Home Assistant config:
-
-```text
-custom_components/ttlock_local
+```bash
+npm install
+npx tsc -p tsconfig.json
+npm run webui
 ```
 
-Then restart Home Assistant.
+The Web UI listens on:
 
-## Configure
+```text
+http://localhost:8990
+```
 
-After restart:
+## Docker
 
-1. Go to `Settings -> Devices & Services`
-2. Click `Add Integration`
-3. Search for `TTLock Local`
-4. Enter:
-   - backend host
-   - backend port
-   - poll interval
+Docker usage is documented in:
 
-Example:
+- [`DOCKER.md`](./DOCKER.md)
 
-- host: `192.168.1.50`
-- port: `8990`
-- poll interval: `10`
+Runtime settings can be stored in:
 
-You can also change host, port, and poll interval later in the integration options.
+- [`.env.example`](./.env.example)
 
-## Backend Setup
+## API
 
-Backend setup is documented in the server repo:
+HTTP endpoints are documented in:
 
-- [`ttlock-local-server README`](https://github.com/Vinhuit/ttlock-local-server)
-- [`ttlock-local-server API.md`](https://github.com/Vinhuit/ttlock-local-server/blob/main/API.md)
-- [`ttlock-local-server DOCKER.md`](https://github.com/Vinhuit/ttlock-local-server/blob/main/DOCKER.md)
+- [`API.md`](./API.md)
 
-Before configuring Home Assistant, verify the backend first:
+Useful checks:
 
-- `GET http://<backend-ip>:8990/api/healthz`
-- `GET http://<backend-ip>:8990/api/status`
+- `GET /api/healthz`
+- `GET /api/status`
 
-## Entities
+## Related Repositories
 
-Per lock:
-
-- `lock`
-- battery sensor
-- RSSI sensor
-- connected sensor
-- last action sensor
-- updated sensor
-
-Global helpers:
-
-- refresh monitor button
-- reconnect active lock button
-
-## Troubleshooting
-
-### The integration loads but no locks appear
-
-Usually this means the backend is reachable, but it has no saved locks yet.
-
-Check the backend first:
-
-- does Web UI work?
-- does `lockData.json` exist on the backend host?
-- can the backend lock/unlock outside Home Assistant?
-
-### Home Assistant can connect, but controls fail
-
-That usually means:
-
-- HTTP is fine
-- BLE action failed on the backend side
-
-Check the backend logs in `ttlock-local-server`.
-
-### Only one action is shown in Controls
-
-This is normal Home Assistant behavior for a `lock` entity.  
-State details such as `Connected`, `Battery`, `Last Action`, and `Updated` are exposed as separate sensors or entity attributes, not as extra buttons inside the main lock control.
-
-## Repository Scope
-
-This repository should stay focused on:
-
-- Home Assistant integration code
-- HACS metadata
-- user-facing setup docs for Home Assistant
-
-Anything related to:
-
-- BLE
-- TTLock protocol
-- Web UI
-- `server.js`
-- Docker runtime
-
-should be handled in:
-
-- [`Vinhuit/ttlock-local-server`](https://github.com/Vinhuit/ttlock-local-server)
+- Home Assistant integration:
+  [`Vinhuit/ttlock-local-hass`](https://github.com/Vinhuit/ttlock-local-hass)
+- Upstream SDK base:
+  [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
 
 ## Support
 
