@@ -27,6 +27,7 @@ This repository now serves the local backend and SDK side:
 | `server.js` | HTTP backend for the Web UI and other local clients |
 | Docker | backend deployment on a dedicated BLE host |
 | Linux BLE | BlueZ D-Bus discovery and connect path |
+| Android apps | native demo and minimal Android references in this repo |
 
 ## 📦 What This Repo Is
 
@@ -81,6 +82,22 @@ This is the main local control surface for:
 The Home Assistant custom integration is in a separate repository:
 
 - [`Vinhuit/ttlock-local-hass`](https://github.com/Vinhuit/ttlock-local-hass)
+
+### 4. Android App Preview
+
+Android reference apps are also included in this repository:
+
+<p>
+  <img src="./Android_SDK_Minimal/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Android Minimal app icon" width="72" />
+  <img src="./Android_SDK_Demo/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Android Demo app icon" width="72" />
+</p>
+
+- [`Android_SDK_Minimal`](./Android_SDK_Minimal)
+  - lighter Android reference app for local TTLock flows
+- [`Android_SDK_Demo`](./Android_SDK_Demo)
+  - broader Android demo app based on the TTLock SDK structure
+
+Use these if you want to inspect or prototype an Android-side BLE flow alongside the local server.
 
 ## ✅ Current Feature Coverage
 
