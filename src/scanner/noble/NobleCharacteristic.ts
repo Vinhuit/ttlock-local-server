@@ -7,6 +7,8 @@ import { CharacteristicInterface, DescriptorInterface } from "../DeviceInterface
 import { NobleDescriptor } from "./NobleDescriptor";
 import { NobleDevice } from "./NobleDevice";
 
+const DEFAULT_SUBSCRIBE_TIMEOUT_MS = 4000;
+
 export class NobleCharacteristic extends EventEmitter implements CharacteristicInterface {
   uuid: string;
   name?: string | undefined;
@@ -30,10 +32,7 @@ export class NobleCharacteristic extends EventEmitter implements CharacteristicI
   }
 
   getUUID(): string {
-    if (this.uuid.length > 4) {
-      return this.uuid.replace("-0000-1000-8000-00805f9b34fb", "").replace("0000", "");
-    }
-    return this.uuid;
+    return normalizeBluetoothUuid(this.uuid);
   }
 
   async discoverDescriptors(): Promise<Map<string, DescriptorInterface>> {
@@ -107,8 +106,29 @@ export class NobleCharacteristic extends EventEmitter implements CharacteristicI
   }
 
   async subscribe(): Promise<void> {
-    await this.characteristic.subscribeAsync();
+    if (!this.device.connected) {
+      throw new Error("NobleDevice is not connected");
+    }
+
+    const subscribeTimeoutMs = getPositiveIntEnv("TTLOCK_SUBSCRIBE_TIMEOUT_MS", DEFAULT_SUBSCRIBE_TIMEOUT_MS);
+    await promiseWithTimeout(this.characteristic.subscribeAsync(), subscribeTimeoutMs, "Characteristic subscribe timed out");
+
+    if (!this.device.connected) {
+      throw new Error("NobleDevice disconnected during subscribe");
+    }
     // await this.characteristic.notifyAsync(true);
+  }
+
+  async unsubscribe(): Promise<void> {
+    if (!this.device.connected) {
+      return;
+    }
+
+    try {
+      await this.characteristic.unsubscribeAsync();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   private onRead(data: Buffer) {
@@ -142,5 +162,42 @@ export class NobleCharacteristic extends EventEmitter implements CharacteristicI
 
   toString(): string {
     return this.characteristic.toString();
+  }
+}
+
+function normalizeBluetoothUuid(uuid: string): string {
+  const normalized = uuid.toLowerCase().replace(/-/g, "");
+  const bluetoothBaseUuid = "00001000800000805f9b34fb";
+  if (normalized.length === 32 && normalized.endsWith(bluetoothBaseUuid)) {
+    return normalized.slice(4, 8);
+  }
+  return normalized;
+}
+
+function getPositiveIntEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) {
+    return fallback;
+  }
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (Number.isFinite(parsedValue) && parsedValue > 0) {
+    return parsedValue;
+  }
+  return fallback;
+}
+
+async function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
   }
 }

@@ -9,6 +9,27 @@ import { TTDevice } from "./TTDevice";
 
 const CRLF = "0d0a";
 const MTU = 20;
+const DEFAULT_COMMAND_RESPONSE_TIMEOUT_MS = 3000;
+const DEFAULT_COMMAND_RETRIES = 3;
+const DEFAULT_POST_CONNECT_DELAY_MS = 150;
+const DEFAULT_SUBSCRIBE_RETRIES = 2;
+const DEFAULT_SUBSCRIBE_RETRY_DELAY_MS = 250;
+
+function getPositiveIntEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) {
+    return fallback;
+  }
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (Number.isFinite(parsedValue) && parsedValue > 0) {
+    return parsedValue;
+  }
+  return fallback;
+}
+
+function isVerboseScanLoggingEnabled(): boolean {
+  return process.env.TTLOCK_VERBOSE_SCAN_LOGS === "1";
+}
 
 export interface TTBluetoothDevice {
   on(event: "connected", listener: () => void): this;
@@ -24,10 +45,13 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
   private scanner: ScannerInterface;
   private waitingForResponse: boolean = false;
   private responses: CommandEnvelope[] = [];
+  private readonly incomingDataListener: (data: Buffer) => void;
+  private activeNotifyCharacteristic?: CharacteristicInterface;
 
   private constructor(scanner: ScannerInterface) {
     super();
     this.scanner = scanner;
+    this.incomingDataListener = this.onIncomingData.bind(this);
   }
 
   static createFromDevice(device: DeviceInterface, scanner: ScannerInterface): TTBluetoothDevice {
@@ -41,6 +65,7 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
       if (typeof this.device != "undefined") {
         this.device.removeAllListeners();
       }
+      void this.detachNotifyCharacteristic();
       this.device = device;
       this.device.on("connected", this.onDeviceConnected.bind(this));
       this.device.on("disconnected", this.onDeviceDisconnected.bind(this));
@@ -49,9 +74,23 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
     if (typeof this.device != "undefined") {
       this.id = this.device.id;
       this.name = this.device.name;
+      this.address = this.device.address;
       this.rssi = this.device.rssi;
       if (this.device.manufacturerData.length >= 15) {
+        const discoveredAddress = this.device.address;
         this.parseManufacturerData(this.device.manufacturerData);
+        if (discoveredAddress && this.address && this.address !== discoveredAddress) {
+          if (isVerboseScanLoggingEnabled()) {
+            console.log(`TTBluetoothDevice manufacturer MAC mismatch discovered=${discoveredAddress} parsed=${this.address}; keeping discovered address`);
+          }
+          this.address = discoveredAddress;
+          this.protocolType = 0;
+          this.protocolVersion = 0;
+          this.scene = 0;
+          this.groupId = 0;
+          this.orgId = 0;
+          this.lockType = LockType.UNKNOWN;
+        }
       }
     }
 
@@ -60,17 +99,32 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
 
   async connect(): Promise<boolean> {
     if (typeof this.device != "undefined" && this.device.connectable) {
+      this.resetTransientState();
+      const transportName = this.device.constructor?.name || "UnknownDevice";
+      const postConnectDelayMs = getPositiveIntEnv("TTLOCK_BLE_POST_CONNECT_DELAY_MS", DEFAULT_POST_CONNECT_DELAY_MS);
+      console.log(`TTBluetoothDevice connect start transport=${transportName} address=${this.device.address}`);
       // stop scan
       await this.scanner.stopScan();
+      await this.detachNotifyCharacteristic();
       if (await this.device.connect()) {
-        // TODO: something happens here (disconnect) and it's stuck in limbo
-        console.log("BLE Device reading basic info");
-        await this.readBasicInfo();
-        console.log("BLE Device read basic info");
-        const subscribed = await this.subscribe();
-        console.log("BLE Device subscribed");
+        console.log(`TTBluetoothDevice connected transport=${transportName}, waiting ${postConnectDelayMs}ms before subscribe`);
+        await sleep(postConnectDelayMs);
+        if (!this.device.connected) {
+          console.log("Device disconnected before subscribe");
+          this.resetTransientState();
+          return false;
+        }
+        let subscribed = false;
+        try {
+          subscribed = await this.subscribe();
+        } catch (error) {
+          console.log("BLE subscribe threw error:", error instanceof Error ? error.message : error);
+          subscribed = false;
+        }
         if (!subscribed) {
+          console.log("BLE subscribe failed");
           await this.device.disconnect();
+          this.resetTransientState();
           return false;
         } else {
           this.connected = true;
@@ -96,6 +150,8 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
 
   private async onDeviceDisconnected() {
     this.connected = false;
+    await this.detachNotifyCharacteristic();
+    this.resetTransientState();
     // console.log("TTBluetoothDevice disconnected", this.device?.id);
     this.emit("disconnected");
   }
@@ -134,28 +190,72 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
   private async subscribe(): Promise<boolean> {
     if (typeof this.device != "undefined") {
       let service: ServiceInterface | undefined;
-      if (this.device.services.has("1910")) {
-        service = this.device.services.get("1910");
+      const subscribeRetries = getPositiveIntEnv("TTLOCK_BLE_SUBSCRIBE_RETRIES", DEFAULT_SUBSCRIBE_RETRIES);
+      const subscribeRetryDelayMs = getPositiveIntEnv("TTLOCK_BLE_SUBSCRIBE_RETRY_DELAY_MS", DEFAULT_SUBSCRIBE_RETRY_DELAY_MS);
+      console.log(`BLE subscribe start address=${this.device.address} retries=${subscribeRetries}`);
+      if (!this.device.connected) {
+        console.log("BLE subscribe skipped because device is not connected");
+        return false;
+      }
+      for (let attempt = 1; attempt <= subscribeRetries; attempt += 1) {
+        if (!this.device.services.has("1910")) {
+          console.log(`BLE subscribe discovering services (attempt ${attempt}/${subscribeRetries})`);
+          await this.device.discoverServices();
+          console.log(`BLE subscribe services after attempt ${attempt}: ${Array.from(this.device.services.keys()).join(", ")}`);
+        }
+        if (!this.device.connected) {
+          console.log("BLE disconnected while discovering services");
+          return false;
+        }
+        if (this.device.services.has("1910")) {
+          service = this.device.services.get("1910");
+          break;
+        }
+        if (attempt < subscribeRetries) {
+          console.log(`BLE service 1910 still missing, waiting ${subscribeRetryDelayMs}ms before retry`);
+          await sleep(subscribeRetryDelayMs);
+        }
       }
       if (typeof service != "undefined") {
-        await service.readCharacteristics();
+        console.log("BLE discovering characteristics for service 1910");
+        await service.discoverCharacteristics();
+        console.log("BLE discovered characteristics for 1910:", Array.from(service.characteristics.keys()).join(", "));
+        if (!this.device.connected) {
+          console.log("BLE disconnected while discovering characteristics");
+          return false;
+        }
         if (service.characteristics.has("fff4")) {
           const characteristic = service.characteristics.get("fff4");
           if (typeof characteristic != "undefined") {
-            await characteristic.subscribe();
-            characteristic.on("dataRead", this.onIncomingData.bind(this));
-            // does not seem to be required
-            // await characteristic.discoverDescriptors();
-            // const descriptor = characteristic.descriptors.get("2902");
-            // if (typeof descriptor != "undefined") {
-            //   console.log("Subscribing to descriptor notifications");
-            //   await descriptor.writeValue(Buffer.from([0x01, 0x00])); // BE
-            //   // await descriptor.writeValue(Buffer.from([0x00, 0x01])); // LE
-            // }
-            return true;
+            try {
+              console.log("BLE subscribing to notify characteristic fff4");
+              await characteristic.subscribe();
+              if (!this.device.connected) {
+                console.log("BLE disconnected right after subscribe");
+                return false;
+              }
+              console.log("BLE subscribe to fff4 succeeded");
+              await this.attachNotifyCharacteristic(characteristic);
+              // does not seem to be required
+              // await characteristic.discoverDescriptors();
+              // const descriptor = characteristic.descriptors.get("2902");
+              // if (typeof descriptor != "undefined") {
+              //   console.log("Subscribing to descriptor notifications");
+              //   await descriptor.writeValue(Buffer.from([0x01, 0x00])); // BE
+              //   // await descriptor.writeValue(Buffer.from([0x00, 0x01])); // LE
+              // }
+              return true;
+            } catch (error) {
+              console.log("BLE subscribe error:", error instanceof Error ? error.message : error);
+              return false;
+            }
           }
         }
+        console.log("BLE notify characteristic fff4 not found");
+        return false;
       }
+      console.log("BLE discovered services:", Array.from(this.device.services.keys()).join(", "));
+      console.log("BLE lock service 1910 not found");
     }
     return false;
   }
@@ -165,8 +265,7 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
       throw new Error("Command already in progress");
     }
     if (this.responses.length > 0) {
-      // should this be an error ?
-      throw new Error("Unprocessed responses");
+      this.responses = [];
     }
     const commandData = command.buildCommandBuffer();
     if (commandData) {
@@ -176,48 +275,42 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
       ]);
       // write with 20 bytes MTU
       const service = this.device?.services.get("1910");
-      if (typeof service != undefined) {
+      if (typeof service != "undefined") {
         const characteristic = service?.characteristics.get("fff2");
         if (typeof characteristic != "undefined") {
           if (waitForResponse) {
+            const maxAttempts = getPositiveIntEnv("TTLOCK_COMMAND_RETRIES", DEFAULT_COMMAND_RETRIES);
+            const responseTimeout = getPositiveIntEnv("TTLOCK_COMMAND_RESPONSE_TIMEOUT_MS", DEFAULT_COMMAND_RESPONSE_TIMEOUT_MS);
             let retry = 0;
             let crcs: number[] = [];
             let response: CommandEnvelope | undefined;
             this.waitingForResponse = true;
-            do {
-              if (retry > 0) {
-                // wait a bit before retry
-                // console.log("Sleeping a bit");
-                await sleep(200);
-              }
-              const written = await this.writeCharacteristic(characteristic, data);
-              if (!written) {
-                this.waitingForResponse = false;
-                // make sure we clear response buffer as a response could still have been
-                // received between writing packets (before lock disconnects, on unstable network) 
-                this.responses = [];
-                throw new Error("Unable to send data to lock");
-              }
-              // wait for a response
-              // console.log("Waiting for response");
-              let cycles = 0;
-              while (this.responses.length == 0 && this.connected) {
-                cycles++;
-                await sleep(5);
-              }
-              // console.log("Waited for a response for", cycles, "=", cycles * 5, "ms");
-              if (!this.connected) {
-                this.waitingForResponse = false;
-                this.responses = [];
-                throw new Error("Disconnected while waiting for response");
-              }
-              response = this.responses.pop();
-              if (typeof response != "undefined") {
-                crcs.push(response.getCrc());
-              }
-              retry++;
-            } while (typeof response == "undefined" || (!response.isCrcOk() && !ignoreCrc && retry <= 2));
-            this.waitingForResponse = false;
+            try {
+              do {
+                if (retry > 0) {
+                  await sleep(200);
+                }
+                const written = await this.writeCharacteristic(characteristic, data);
+                if (!written) {
+                  this.responses = [];
+                  throw new Error("Unable to send data to lock");
+                }
+                response = await this.waitForQueuedResponse(responseTimeout);
+                if (!this.connected) {
+                  this.responses = [];
+                  throw new Error("Disconnected while waiting for response");
+                }
+                if (typeof response != "undefined") {
+                  crcs.push(response.getCrc());
+                }
+                retry++;
+              } while ((typeof response == "undefined" || (!response.isCrcOk() && !ignoreCrc)) && retry < maxAttempts);
+            } finally {
+              this.waitingForResponse = false;
+            }
+            if (typeof response == "undefined") {
+              throw new Error("No response from lock");
+            }
             if (!response.isCrcOk() && !ignoreCrc) {
               // check if all CRCs match and auto-ignore bad CRC
               if (crcs.length > 1) {
@@ -233,10 +326,13 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
             return response;
           } else {
             await this.writeCharacteristic(characteristic, data);
+            return;
           }
         }
       }
+      throw new Error("Lock write characteristic not available");
     }
+    throw new Error("Unable to build command buffer");
   }
 
   /**
@@ -247,23 +343,12 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
     if (this.waitingForResponse) {
       throw new Error("Command already in progress");
     }
-    let response: CommandEnvelope | undefined;
     this.waitingForResponse = true;
-
-    console.log("Waiting for response");
-    let cycles = 0;
-    const sleepPerCycle = 100;
-    while (this.responses.length == 0 && cycles * sleepPerCycle < timeout) {
-      cycles++;
-      await sleep(sleepPerCycle);
+    try {
+      return await this.waitForQueuedResponse(timeout);
+    } finally {
+      this.waitingForResponse = false;
     }
-    console.log("Waited for a response for", cycles, "=", cycles * sleepPerCycle, "ms");
-
-    if (this.responses.length > 0) {
-      response = this.responses.pop();
-    }
-    this.waitingForResponse = false;
-    return response;
   }
 
   private async writeCharacteristic(characteristic: CharacteristicInterface, data: Buffer): Promise<boolean> {
@@ -324,9 +409,63 @@ export class TTBluetoothDevice extends TTDevice implements TTBluetoothDevice {
   }
 
   async disconnect() {
+    await this.detachNotifyCharacteristic();
     if (await this.device?.disconnect()) {
       this.connected = false;
+      this.resetTransientState();
     }
+  }
+
+  private async waitForQueuedResponse(timeout: number): Promise<CommandEnvelope | undefined> {
+    let elapsed = 0;
+    const sleepPerCycle = 10;
+
+    while (this.responses.length == 0 && this.connected && elapsed < timeout) {
+      await sleep(sleepPerCycle);
+      elapsed += sleepPerCycle;
+    }
+
+    return this.responses.pop();
+  }
+
+  private resetTransientState() {
+    this.waitingForResponse = false;
+    this.responses = [];
+    this.incomingDataBuffer = Buffer.from([]);
+  }
+
+  private async attachNotifyCharacteristic(characteristic: CharacteristicInterface) {
+    if (this.activeNotifyCharacteristic === characteristic) {
+      characteristic.removeListener("dataRead", this.incomingDataListener);
+      characteristic.on("dataRead", this.incomingDataListener);
+      return;
+    }
+
+    await this.detachNotifyCharacteristic();
+    characteristic.removeListener("dataRead", this.incomingDataListener);
+    characteristic.on("dataRead", this.incomingDataListener);
+    this.activeNotifyCharacteristic = characteristic;
+  }
+
+  private async detachNotifyCharacteristic() {
+    const characteristic = this.activeNotifyCharacteristic;
+    if (!characteristic) {
+      return;
+    }
+
+    characteristic.removeListener("dataRead", this.incomingDataListener);
+
+    if (typeof characteristic.dispose === "function") {
+      try {
+        await characteristic.dispose();
+      } catch (_error) {}
+    } else if (typeof characteristic.unsubscribe === "function") {
+      try {
+        await characteristic.unsubscribe();
+      } catch (_error) {}
+    }
+
+    this.activeNotifyCharacteristic = undefined;
   }
 
   parseManufacturerData(manufacturerData: Buffer) {

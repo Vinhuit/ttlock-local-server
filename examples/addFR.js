@@ -32,7 +32,15 @@ async function doStuff() {
         console.log("Scanning progress", progress);
         console.log();
       });
-      const result = await lock.addFingerprint('202001010000', '202212312359');
+      // const now = Date.now(); // Current timestamp in milliseconds
+      // const tenYearsMs = 10 * 365.25 * 24 * 60 * 60 * 1000;
+      // // Ten years, accounting for leap years
+
+      // const start = now;
+      // const end = now + tenYearsMs;
+
+      // const result = await lock.addFingerprint(start, end);
+      const result = await lock.addFingerprint('202508271430', '203508271430');
       console.log(result);
       await lock.disconnect();
 

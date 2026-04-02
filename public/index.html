@@ -1,0 +1,1690 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TTLock Web UI</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --panel: #fffaf3;
+      --panel-2: #f1e6d4;
+      --ink: #1f1b16;
+      --muted: #6a6155;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b91c1c;
+      --border: #dccbb2;
+      --shadow: 0 18px 50px rgba(69, 48, 23, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180, 83, 9, 0.12), transparent 30%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 24%),
+        linear-gradient(180deg, #f8f3ec 0%, var(--bg) 100%);
+    }
+
+    .shell {
+      width: min(1100px, calc(100% - 32px));
+      margin: 32px auto;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255, 250, 243, 0.96), rgba(241, 230, 212, 0.96));
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card {
+      grid-column: span 12;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: rgba(255, 250, 243, 0.92);
+      box-shadow: var(--shadow);
+    }
+
+    .card.wide {
+      grid-column: span 8;
+    }
+
+    .card.side {
+      grid-column: span 4;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      margin: 0;
+    }
+
+    .accordion {
+      display: grid;
+      gap: 14px;
+    }
+
+    .accordion > summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .accordion > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .accordion-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .accordion-toggle::before {
+      content: '+';
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .accordion[open] .accordion-toggle::before {
+      content: '−';
+    }
+
+    .accordion-toggle::after {
+      content: 'Show';
+      font-size: 0.78rem;
+    }
+
+    .accordion[open] .accordion-toggle::after {
+      content: 'Hide';
+    }
+
+    .accordion-body {
+      display: grid;
+      gap: 14px;
+    }
+
+    .tool-groups {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tool-group {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(241, 230, 212, 0.42);
+      padding: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel-2);
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fffdf9;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+    }
+
+    .unlock {
+      background: var(--accent);
+    }
+
+    .lock {
+      background: var(--accent-2);
+    }
+
+    .secondary {
+      background: #5b4c3a;
+    }
+
+    .danger {
+      background: var(--danger);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(31, 27, 22, 0.06);
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent-2);
+      box-shadow: 0 0 0 6px rgba(180, 83, 9, 0.12);
+    }
+
+    .status-dot.ok {
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(15, 118, 110, 0.12);
+    }
+
+    .status-dot.bad {
+      background: var(--danger);
+      box-shadow: 0 0 0 6px rgba(185, 28, 28, 0.12);
+    }
+
+    .error {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(185, 28, 28, 0.08);
+      color: #7f1d1d;
+      display: none;
+    }
+
+    .logs {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .logs li {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f6edde;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .logs time {
+      display: block;
+      color: var(--muted);
+      font-size: 0.76rem;
+      margin-bottom: 4px;
+    }
+
+    .device-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .device-item {
+      padding: 14px;
+      border-radius: 16px;
+      background: #f6edde;
+      border: 1px solid var(--border);
+    }
+
+    .device-top {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .device-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .device-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(31, 27, 22, 0.08);
+    }
+
+    .tag.good {
+      background: rgba(15, 118, 110, 0.12);
+      color: #0f5d56;
+    }
+
+    .tag.warn {
+      background: rgba(180, 83, 9, 0.12);
+      color: #8c3d07;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(31, 27, 22, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(420px, 100%);
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(255, 250, 243, 0.98), rgba(241, 230, 212, 0.98));
+      box-shadow: var(--shadow);
+    }
+
+    .modal-title {
+      margin: 0 0 10px;
+      font-size: 1.4rem;
+      line-height: 1.1;
+    }
+
+    .modal-copy {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .scan-count {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--panel-2);
+      font-size: 1.6rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .modal-actions button {
+      flex: 1 1 0;
+    }
+
+    .danger-copy {
+      color: #7f1d1d;
+    }
+
+    @media (max-width: 900px) {
+      .card.wide,
+      .card.side {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 20px, 1100px);
+        margin: 20px auto;
+      }
+
+      .hero,
+      .card {
+        border-radius: 18px;
+      }
+
+      .actions,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">TTLock Control</p>
+      <h1>Web UI</h1>
+      <p class="subtitle">Persistent Bluetooth monitor with direct lock control.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card wide">
+        <p class="eyebrow">Overview</p>
+        <div class="status-pill">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">Loading...</span>
+        </div>
+        <div class="stats" style="margin-top: 16px;">
+          <div class="stat">
+            <span class="label">Target MAC</span>
+            <span id="address" class="value">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Connected</span>
+            <span id="connected" class="value">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Lock State</span>
+            <span id="lockedState" class="value">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Battery</span>
+            <span id="battery" class="value">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Last Action</span>
+            <span id="lastAction" class="value">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Updated</span>
+            <span id="updatedAt" class="value">-</span>
+          </div>
+        </div>
+        <div id="errorBox" class="error"></div>
+      </article>
+
+      <article class="card wide">
+        <details class="accordion">
+          <summary>
+            <p class="eyebrow section-title">Init Lock</p>
+            <span class="accordion-toggle">Show</span>
+          </summary>
+          <div class="accordion-body">
+            <div class="actions">
+              <button id="startInitScanBtn" class="unlock">Start Init Scan</button>
+              <button id="stopInitScanBtn" class="secondary">Stop Init Scan</button>
+            </div>
+            <p class="hint">Scan for locks that are still in pairing mode, then press Init on the correct device.</p>
+            <div id="discoveredLocks" class="device-list">
+              <div class="device-item">No discovered locks yet.</div>
+            </div>
+          </div>
+        </details>
+      </article>
+
+      <article class="card wide">
+        <details class="accordion" open>
+          <summary>
+            <p class="eyebrow section-title">Saved Locks</p>
+            <span class="accordion-toggle">Hide</span>
+          </summary>
+          <div class="accordion-body">
+            <p class="hint">Only initialized locks already saved in <code>lockData.json</code> appear here. The action panel on the right operates on the selected saved lock.</p>
+            <div class="actions">
+              <button id="exportLockDataBtn" class="secondary">Export LockData</button>
+              <button id="importLockDataBtn" class="secondary">Import LockData</button>
+            </div>
+            <input id="importLockDataInput" type="file" accept=".json,application/json" style="display:none;">
+            <div id="managedLocks" class="device-list">
+              <div class="device-item">No saved locks yet.</div>
+            </div>
+          </div>
+        </details>
+      </article>
+
+      <aside class="card side">
+        <p class="eyebrow">Actions</p>
+        <div class="tool-groups">
+          <div class="tool-group">
+            <div class="actions">
+              <button id="unlockBtn" class="unlock">Unlock</button>
+              <button id="lockBtn" class="lock">Lock</button>
+              <button id="refreshBtn" class="secondary">Refresh</button>
+              <button id="resetLockBtn" class="danger">Reset Lock</button>
+              <button id="reconnectBtn" class="secondary" style="grid-column: 1 / -1;">Reconnect</button>
+            </div>
+          </div>
+
+          <details class="accordion tool-group">
+            <summary>
+              <p class="eyebrow section-title">Fingerprint Tools</p>
+              <span class="accordion-toggle">Show</span>
+            </summary>
+            <div class="accordion-body">
+              <div class="actions">
+                <button id="addFingerprintBtn" class="unlock">Add Fingerprint</button>
+                <button id="getFingerprintsBtn" class="secondary">Get Fingerprints</button>
+              </div>
+              <div class="stack">
+                <div class="field">
+                  <label for="fpStart">Fingerprint Start</label>
+                  <input id="fpStart" type="text" placeholder="YYYYMMDDHHmm">
+                </div>
+                <div class="field">
+                  <label for="fpEnd">Fingerprint End</label>
+                  <input id="fpEnd" type="text" placeholder="YYYYMMDDHHmm">
+                </div>
+                <div class="field">
+                  <label for="fpDeleteNumber">Fingerprint Number</label>
+                  <input id="fpDeleteNumber" type="text" placeholder="fpNumber to delete">
+                </div>
+                <button id="deleteFingerprintBtn" class="danger">Delete Fingerprint</button>
+                <p class="hint">Leave start and end empty to use the default 10-year window.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="accordion tool-group">
+            <summary>
+              <p class="eyebrow section-title">Passcode Tools</p>
+              <span class="accordion-toggle">Show</span>
+            </summary>
+            <div class="accordion-body">
+              <div class="field">
+                <label for="passCodeValue">Passcode</label>
+                <input id="passCodeValue" type="text" placeholder="4-9 digits">
+              </div>
+              <div class="field">
+                <label for="passCodeStart">Passcode Start</label>
+                <input id="passCodeStart" type="text" placeholder="YYYYMMDDHHmm">
+              </div>
+              <div class="field">
+                <label for="passCodeEnd">Passcode End</label>
+                <input id="passCodeEnd" type="text" placeholder="YYYYMMDDHHmm">
+              </div>
+              <div class="field">
+                <label for="passCodeDeleteValue">Delete Passcode</label>
+                <input id="passCodeDeleteValue" type="text" placeholder="Existing passcode">
+              </div>
+              <div class="actions">
+                <button id="addPasscodeBtn" class="unlock">Add Passcode</button>
+                <button id="getPasscodesBtn" class="secondary">Get Passcodes</button>
+                <button id="deletePasscodeBtn" class="danger">Delete Passcode</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="accordion tool-group">
+            <summary>
+              <p class="eyebrow section-title">Passage Mode Tools</p>
+              <span class="accordion-toggle">Show</span>
+            </summary>
+            <div class="accordion-body">
+              <div class="field">
+                <label for="passageType">Passage Type</label>
+                <select id="passageType">
+                  <option value="1">Weekly</option>
+                  <option value="2">Monthly</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="passageWeekOrDay">Weekday / Day</label>
+                <input id="passageWeekOrDay" type="number" min="0" max="31" placeholder="0 or 1-31">
+              </div>
+              <div class="field">
+                <label for="passageMonth">Month</label>
+                <input id="passageMonth" type="number" min="0" max="12" placeholder="0 or 1-12">
+              </div>
+              <div class="field">
+                <label for="passageStartHour">Start (HHMM)</label>
+                <input id="passageStartHour" type="text" placeholder="0000">
+              </div>
+              <div class="field">
+                <label for="passageEndHour">End (HHMM)</label>
+                <input id="passageEndHour" type="text" placeholder="2359">
+              </div>
+              <div class="actions">
+                <button id="getPassageBtn" class="secondary">Get Passage</button>
+                <button id="setPassageBtn" class="unlock">Set Passage</button>
+                <button id="deletePassageBtn" class="danger">Delete Passage</button>
+                <button id="clearPassageBtn" class="danger">Clear Passage</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <article class="card">
+        <details class="accordion">
+          <summary>
+            <p class="eyebrow section-title">Fingerprints</p>
+            <span class="accordion-toggle">Show</span>
+          </summary>
+          <div class="accordion-body">
+            <div id="fingerprints" class="device-list">
+              <div class="device-item">No fingerprint data loaded.</div>
+            </div>
+          </div>
+        </details>
+      </article>
+
+      <article class="card">
+        <details class="accordion">
+          <summary>
+            <p class="eyebrow section-title">Passcodes</p>
+            <span class="accordion-toggle">Show</span>
+          </summary>
+          <div class="accordion-body">
+            <div id="passcodes" class="device-list">
+              <div class="device-item">No passcode data loaded.</div>
+            </div>
+          </div>
+        </details>
+      </article>
+
+      <article class="card">
+        <details class="accordion">
+          <summary>
+            <p class="eyebrow section-title">Passage Modes</p>
+            <span class="accordion-toggle">Show</span>
+          </summary>
+          <div class="accordion-body">
+            <div id="passageModes" class="device-list">
+              <div class="device-item">No passage mode data loaded.</div>
+            </div>
+          </div>
+        </details>
+      </article>
+
+      <article class="card">
+        <details class="accordion">
+          <summary>
+            <p class="eyebrow section-title">Recent Activity</p>
+            <span class="accordion-toggle">Show</span>
+          </summary>
+          <div class="accordion-body">
+            <ul id="logs" class="logs">
+              <li>No events yet.</li>
+            </ul>
+          </div>
+        </details>
+      </article>
+    </section>
+  </main>
+
+  <div id="fingerprintModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <p class="eyebrow">Fingerprint Enrollment</p>
+      <h2 class="modal-title">Scan In Progress</h2>
+      <p id="fingerprintModalMessage" class="modal-copy">Preparing fingerprint enrollment...</p>
+      <div class="scan-count">Scans: <span id="fingerprintModalCount">0</span></div>
+      <div class="modal-actions">
+        <button id="cancelFingerprintBtn" class="danger" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resetLockModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <p class="eyebrow">Danger Zone</p>
+      <h2 class="modal-title">Reset Lock?</h2>
+      <p class="modal-copy danger-copy">
+        This will factory reset the lock and remove the saved local credentials. You will need to init the lock again before reuse.
+      </p>
+      <div class="modal-actions">
+        <button id="cancelResetLockBtn" class="secondary" type="button">Cancel</button>
+        <button id="confirmResetLockBtn" class="danger" type="button">Reset Lock</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="renameModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <p id="renameModalEyebrow" class="eyebrow">Rename</p>
+      <h2 id="renameModalTitle" class="modal-title">Rename Item</h2>
+      <p id="renameModalCopy" class="modal-copy">Enter a new name.</p>
+      <div class="field" style="margin-top:16px;">
+        <label for="renameModalInput">Name</label>
+        <input id="renameModalInput" type="text" maxlength="64" placeholder="Enter name">
+      </div>
+      <div class="modal-actions">
+        <button id="cancelRenameBtn" class="secondary" type="button">Cancel</button>
+        <button id="confirmRenameBtn" class="unlock" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const address = document.getElementById('address');
+    const connected = document.getElementById('connected');
+    const lockedState = document.getElementById('lockedState');
+    const battery = document.getElementById('battery');
+    const lastAction = document.getElementById('lastAction');
+    const updatedAt = document.getElementById('updatedAt');
+    const errorBox = document.getElementById('errorBox');
+    const logs = document.getElementById('logs');
+    const fpStart = document.getElementById('fpStart');
+    const fpEnd = document.getElementById('fpEnd');
+    const fpDeleteNumber = document.getElementById('fpDeleteNumber');
+    const passCodeValue = document.getElementById('passCodeValue');
+    const passCodeStart = document.getElementById('passCodeStart');
+    const passCodeEnd = document.getElementById('passCodeEnd');
+    const passCodeDeleteValue = document.getElementById('passCodeDeleteValue');
+    const passageType = document.getElementById('passageType');
+    const passageWeekOrDay = document.getElementById('passageWeekOrDay');
+    const passageMonth = document.getElementById('passageMonth');
+    const passageStartHour = document.getElementById('passageStartHour');
+    const passageEndHour = document.getElementById('passageEndHour');
+    const discoveredLocks = document.getElementById('discoveredLocks');
+    const managedLocks = document.getElementById('managedLocks');
+    const exportLockDataBtn = document.getElementById('exportLockDataBtn');
+    const importLockDataBtn = document.getElementById('importLockDataBtn');
+    const importLockDataInput = document.getElementById('importLockDataInput');
+    const fingerprints = document.getElementById('fingerprints');
+    const passcodes = document.getElementById('passcodes');
+    const passageModes = document.getElementById('passageModes');
+    const fingerprintModal = document.getElementById('fingerprintModal');
+    const fingerprintModalMessage = document.getElementById('fingerprintModalMessage');
+    const fingerprintModalCount = document.getElementById('fingerprintModalCount');
+    const cancelFingerprintBtn = document.getElementById('cancelFingerprintBtn');
+    const resetLockModal = document.getElementById('resetLockModal');
+    const cancelResetLockBtn = document.getElementById('cancelResetLockBtn');
+    const confirmResetLockBtn = document.getElementById('confirmResetLockBtn');
+    const renameModal = document.getElementById('renameModal');
+    const renameModalEyebrow = document.getElementById('renameModalEyebrow');
+    const renameModalTitle = document.getElementById('renameModalTitle');
+    const renameModalCopy = document.getElementById('renameModalCopy');
+    const renameModalInput = document.getElementById('renameModalInput');
+    const cancelRenameBtn = document.getElementById('cancelRenameBtn');
+    const confirmRenameBtn = document.getElementById('confirmRenameBtn');
+    const buttons = Array.from(document.querySelectorAll('button'));
+
+    let busy = false;
+    let fingerprintPollingTimer = null;
+    let fingerprintCanceling = false;
+    let statusPollingTimer = null;
+    let renameModalResolver = null;
+
+    function setBusy(nextBusy) {
+      busy = nextBusy;
+      buttons.forEach((button) => {
+        button.disabled = nextBusy;
+      });
+      cancelFingerprintBtn.disabled = fingerprintCanceling;
+    }
+
+    async function request(path, options = {}) {
+      const response = await fetch(path, {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || ('HTTP ' + response.status));
+      }
+      return data;
+    }
+
+    function render(state) {
+      statusText.textContent = state.status || '-';
+      statusDot.className = 'status-dot';
+      if (state.connected) {
+        statusDot.classList.add('ok');
+      } else if (state.last_error) {
+        statusDot.classList.add('bad');
+      }
+
+      address.textContent = state.address || '-';
+      connected.textContent = state.connected ? 'Yes' : 'No';
+      lockedState.textContent =
+        state.is_locked === true ? 'Locked' :
+        state.is_locked === false ? 'Unlocked' :
+        'Unknown';
+      battery.textContent = typeof state.battery === 'number' ? (state.battery + '%') : '-';
+      lastAction.textContent = state.last_action || '-';
+      updatedAt.textContent = state.updated_at ? new Date(state.updated_at).toLocaleTimeString() : '-';
+
+      const fingerprintScan = state.fingerprint_scan || {};
+      if (fingerprintScan.active) {
+        fingerprintModal.classList.add('active');
+        fingerprintModal.setAttribute('aria-hidden', 'false');
+        fingerprintModalMessage.textContent = fingerprintScan.message || 'Place your finger on the lock sensor.';
+        fingerprintModalCount.textContent = String(fingerprintScan.progress_count || 0);
+      } else if (!fingerprintPollingTimer) {
+        fingerprintModal.classList.remove('active');
+        fingerprintModal.setAttribute('aria-hidden', 'true');
+        fingerprintModalMessage.textContent = 'Preparing fingerprint enrollment...';
+        fingerprintModalCount.textContent = '0';
+      }
+
+      if (state.last_error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = state.last_error;
+      } else {
+        errorBox.style.display = 'none';
+        errorBox.textContent = '';
+      }
+
+      const discovered = Array.isArray(state.discovered_locks) ? state.discovered_locks : [];
+      const managed = Array.isArray(state.managed_locks) ? state.managed_locks : [];
+      if (discovered.length === 0) {
+        discoveredLocks.innerHTML = '<div class="device-item">No discovered locks yet.</div>';
+      } else {
+        discoveredLocks.innerHTML = discovered.map((item) => {
+          const initTag = item.initialized
+            ? '<span class="tag warn">Initialized</span>'
+            : '<span class="tag good">Setting Mode</span>';
+          const initButton = item.initialized
+            ? ''
+            : '<button class="unlock init-lock-btn" data-address="' + escapeHtml(item.address || '') + '" style="padding:10px 14px;">Init</button>';
+          const connectedText = item.connected ? 'Yes' : 'No';
+          return '' +
+            '<div class="device-item">' +
+              '<div class="device-top">' +
+                '<div>' +
+                  '<div class="device-name">' + escapeHtml(item.name || 'Unknown lock') + '</div>' +
+                  '<div class="device-meta">' + escapeHtml(item.address || '-') + '</div>' +
+                '</div>' +
+                '<div>' + initTag + '</div>' +
+              '</div>' +
+              '<div class="device-meta">RSSI: ' + escapeHtml(item.rssi ?? '-') + ' dBm | Paired: ' + escapeHtml(item.paired ? 'Yes' : 'No') + ' | Connected: ' + escapeHtml(connectedText) + '</div>' +
+              (initButton ? '<div style="margin-top:12px;">' + initButton + '</div>' : '') +
+            '</div>';
+        }).join('');
+      }
+
+      if (managed.length === 0) {
+        managedLocks.innerHTML = '<div class="device-item">No saved locks yet.</div>';
+      } else {
+        managedLocks.innerHTML = managed.map((item) => {
+          const activeTag = item.active
+            ? '<span class="tag good">Active</span>'
+            : '<span class="tag">Saved</span>';
+          const stateText =
+            item.is_locked === true ? 'Locked' :
+            item.is_locked === false ? 'Unlocked' :
+            'Unknown';
+          const batteryText = typeof item.battery === 'number' ? (item.battery + '%') : '-';
+          const selectButton = item.active
+            ? ''
+            : '<button class="secondary select-lock-btn" data-address="' + escapeHtml(item.address || '') + '" style="padding:10px 14px;">Use This Lock</button>';
+          const renameButton = '<button class="secondary rename-lock-btn" data-address="' + escapeHtml(item.address || '') + '" data-name="' + escapeHtml(item.name || '') + '" style="padding:10px 14px;">Rename</button>';
+          const deleteButton = '<button class="danger delete-lock-btn" data-address="' + escapeHtml(item.address || '') + '" style="padding:10px 14px;">Delete</button>';
+          const actionButtons = item.active
+            ? '<div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">' + renameButton + deleteButton + '</div>'
+            : '<div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">' + selectButton + renameButton + deleteButton + '</div>';
+          return '' +
+            '<div class="device-item">' +
+              '<div class="device-top">' +
+                '<div>' +
+                  '<div class="device-name">' + escapeHtml(item.name || ('TTLock ' + (item.address || '-'))) + '</div>' +
+                  '<div class="device-meta">' + escapeHtml(item.address || '-') + '</div>' +
+                '</div>' +
+                '<div>' + activeTag + '</div>' +
+              '</div>' +
+              '<div class="device-meta">State: ' + escapeHtml(stateText) + ' | Battery: ' + escapeHtml(batteryText) + ' | RSSI: ' + escapeHtml(item.rssi ?? '-') + ' dBm</div>' +
+              '<div class="device-meta">Discovered: ' + escapeHtml(item.discovered ? 'Yes' : 'No') + ' | Connected: ' + escapeHtml(item.connected ? 'Yes' : 'No') + '</div>' +
+              actionButtons +
+            '</div>';
+        }).join('');
+      }
+
+      const items = Array.isArray(state.logs) ? state.logs : [];
+      const fingerprintItems = Array.isArray(state.fingerprints) ? state.fingerprints : [];
+      if (fingerprintItems.length === 0) {
+        fingerprints.innerHTML = '<div class="device-item">No fingerprint data loaded.</div>';
+      } else {
+        fingerprints.innerHTML = fingerprintItems.map((item) => {
+          return '' +
+            '<div class="device-item">' +
+              '<div class="device-top">' +
+                '<div>' +
+                  '<div class="device-name">' + escapeHtml(item.name || ('#' + (item.fpNumber || '-'))) + '</div>' +
+                  '<div class="device-meta">' + escapeHtml(item.fpNumber || '-') + '</div>' +
+                '</div>' +
+                '<div style="display:flex; gap:8px; align-items:center;">' +
+                  '<div class="tag good">Fingerprint</div>' +
+                  '<button class="secondary rename-fingerprint-btn" data-fp-number="' + escapeHtml(item.fpNumber || '') + '" data-name="' + escapeHtml(item.name || '') + '" style="padding:8px 12px;">Rename</button>' +
+                  '<button class="danger delete-fingerprint-btn" data-fp-number="' + escapeHtml(item.fpNumber || '') + '" style="padding:8px 12px;">Delete</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="device-meta">Start: ' + escapeHtml(item.startDate || '-') + '</div>' +
+              '<div class="device-meta">End: ' + escapeHtml(item.endDate || '-') + '</div>' +
+            '</div>';
+        }).join('');
+      }
+
+      const passcodeItems = Array.isArray(state.passcodes) ? state.passcodes : [];
+      if (passcodeItems.length === 0) {
+        passcodes.innerHTML = '<div class="device-item">No passcode data loaded.</div>';
+      } else {
+        passcodes.innerHTML = passcodeItems.map((item) => {
+          const code = item.passCode || item.newPassCode || '-';
+          return '' +
+            '<div class="device-item">' +
+              '<div class="device-top">' +
+                '<div>' +
+                  '<div class="device-name">' + escapeHtml(code) + '</div>' +
+                  '<div class="device-meta">' + escapeHtml(passcodeTypeLabel(item.type)) + '</div>' +
+                '</div>' +
+                '<button class="danger delete-passcode-btn" data-passcode="' + escapeHtml(code) + '" data-type="' + escapeHtml(item.type || 1) + '" style="padding:8px 12px;">Delete</button>' +
+              '</div>' +
+              '<div class="device-meta">Start: ' + escapeHtml(item.startDate || '-') + '</div>' +
+              '<div class="device-meta">End: ' + escapeHtml(item.endDate || '-') + '</div>' +
+            '</div>';
+        }).join('');
+      }
+
+      const passageItems = Array.isArray(state.passage_modes) ? state.passage_modes : [];
+      if (passageItems.length === 0) {
+        passageModes.innerHTML = '<div class="device-item">No passage mode data loaded.</div>';
+      } else {
+        passageModes.innerHTML = passageItems.map((item) => {
+          const descriptor = Number(item.type) === 2
+            ? ('Day ' + escapeHtml(item.weekOrDay || 0) + ' | Month ' + escapeHtml(item.month || 0))
+            : ('Weekday ' + escapeHtml(item.weekOrDay || 0));
+          return '' +
+            '<div class="device-item">' +
+              '<div class="device-top">' +
+                '<div>' +
+                  '<div class="device-name">' + escapeHtml(passageTypeLabel(item.type)) + '</div>' +
+                  '<div class="device-meta">' + descriptor + '</div>' +
+                '</div>' +
+                '<button class="danger delete-passage-item-btn" data-type="' + escapeHtml(item.type || 1) + '" data-week-or-day="' + escapeHtml(item.weekOrDay || 0) + '" data-month="' + escapeHtml(item.month || 0) + '" data-start-hour="' + escapeHtml(item.startHour || '') + '" data-end-hour="' + escapeHtml(item.endHour || '') + '" style="padding:8px 12px;">Delete</button>' +
+              '</div>' +
+              '<div class="device-meta">Window: ' + escapeHtml(item.startHour || '-') + ' - ' + escapeHtml(item.endHour || '-') + '</div>' +
+            '</div>';
+        }).join('');
+      }
+
+      if (items.length === 0) {
+        logs.innerHTML = '<li>No events yet.</li>';
+      } else {
+        logs.innerHTML = items.map((entry) => {
+          const time = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '-';
+          return '<li><time>' + time + '</time>' + escapeHtml(entry.message || '') + '</li>';
+        }).join('');
+      }
+    }
+
+    function showResetLockModal() {
+      resetLockModal.classList.add('active');
+      resetLockModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideResetLockModal() {
+      resetLockModal.classList.remove('active');
+      resetLockModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function showRenameModal(options = {}) {
+      renameModalEyebrow.textContent = options.eyebrow || 'Rename';
+      renameModalTitle.textContent = options.title || 'Rename Item';
+      renameModalCopy.textContent = options.copy || 'Enter a new name.';
+      renameModalInput.value = options.value || '';
+      renameModalInput.placeholder = options.placeholder || 'Enter name';
+      confirmRenameBtn.textContent = options.confirmText || 'Save';
+      renameModal.classList.add('active');
+      renameModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => {
+        renameModalInput.focus();
+        renameModalInput.select();
+      }, 0);
+    }
+
+    function hideRenameModal() {
+      renameModal.classList.remove('active');
+      renameModal.setAttribute('aria-hidden', 'true');
+      renameModalInput.value = '';
+    }
+
+    function resolveRenameModal(value) {
+      const resolver = renameModalResolver;
+      renameModalResolver = null;
+      hideRenameModal();
+      if (resolver) {
+        resolver(value);
+      }
+    }
+
+    function promptForName(options = {}) {
+      if (renameModalResolver) {
+        resolveRenameModal(null);
+      }
+
+      return new Promise((resolve) => {
+        renameModalResolver = resolve;
+        showRenameModal(options);
+      });
+    }
+
+    function showFingerprintModal(message, count) {
+      fingerprintModal.classList.add('active');
+      fingerprintModal.setAttribute('aria-hidden', 'false');
+      fingerprintModalMessage.textContent = message || 'Preparing fingerprint enrollment...';
+      fingerprintModalCount.textContent = String(count || 0);
+    }
+
+    function hideFingerprintModal() {
+      fingerprintModal.classList.remove('active');
+      fingerprintModal.setAttribute('aria-hidden', 'true');
+      fingerprintModalMessage.textContent = 'Preparing fingerprint enrollment...';
+      fingerprintModalCount.textContent = '0';
+    }
+
+    function startFingerprintPolling() {
+      stopFingerprintPolling();
+      fingerprintPollingTimer = setInterval(() => {
+        refreshStatus(true, true).catch(() => {});
+      }, 700);
+    }
+
+    function stopFingerprintPolling() {
+      if (fingerprintPollingTimer) {
+        clearInterval(fingerprintPollingTimer);
+        fingerprintPollingTimer = null;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function passcodeTypeLabel(type) {
+      switch (Number(type)) {
+        case 1: return 'Permanent';
+        case 2: return 'Count';
+        case 3: return 'Period';
+        case 4: return 'Circle';
+        default: return 'Type ' + String(type ?? '-');
+      }
+    }
+
+    function passageTypeLabel(type) {
+      return Number(type) === 2 ? 'Monthly' : 'Weekly';
+    }
+
+    function buildPassagePayload() {
+      return {
+        type: Number(passageType.value || 1),
+        weekOrDay: Number((passageWeekOrDay.value || '').trim() || 0),
+        month: Number((passageMonth.value || '').trim() || 0),
+        startHour: passageStartHour.value.trim(),
+        endHour: passageEndHour.value.trim(),
+      };
+    }
+
+    async function refreshStatus(force = false, wake = !document.hidden) {
+      if (busy && !force) {
+        return;
+      }
+      const state = await request('/api/status' + (wake ? '?wake=1' : ''));
+      render(state);
+    }
+
+    function startStatusPolling() {
+      if (statusPollingTimer) {
+        return;
+      }
+      statusPollingTimer = setInterval(() => {
+        if (document.hidden) {
+          return;
+        }
+        refreshStatus(false, true).catch(() => {});
+      }, 2000);
+    }
+
+    async function runAction(path) {
+      if (busy) {
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request(path, { method: 'POST' });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runActionWithBody(path, body) {
+      if (busy) {
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request(path, {
+          method: 'POST',
+          body,
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runFingerprintAction() {
+      if (busy) {
+        return;
+      }
+
+      setBusy(true);
+      showFingerprintModal('Preparing fingerprint enrollment...', 0);
+      startFingerprintPolling();
+      fingerprintCanceling = false;
+      cancelFingerprintBtn.disabled = false;
+      try {
+        const response = await request('/api/add-fingerprint', {
+          method: 'POST',
+          body: {
+            startDate: fpStart.value.trim(),
+            endDate: fpEnd.value.trim(),
+          },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        stopFingerprintPolling();
+        setBusy(false);
+        fingerprintCanceling = false;
+        cancelFingerprintBtn.disabled = false;
+        hideFingerprintModal();
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function cancelFingerprintEnrollment() {
+      if (fingerprintCanceling) {
+        return;
+      }
+
+      fingerprintCanceling = true;
+      cancelFingerprintBtn.disabled = true;
+      fingerprintModalMessage.textContent = 'Canceling fingerprint enrollment...';
+
+      try {
+        await request('/api/cancel-fingerprint', { method: 'POST' });
+      } catch (error) {
+      } finally {
+        stopFingerprintPolling();
+        hideFingerprintModal();
+        fingerprintCanceling = false;
+        cancelFingerprintBtn.disabled = false;
+      }
+    }
+
+    async function runDeleteFingerprint(fpNumber) {
+      if (busy) {
+        return;
+      }
+
+      const fingerprintNumber = (fpNumber || '').trim();
+      if (!fingerprintNumber) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Fingerprint number is required';
+        return;
+      }
+
+      const confirmed = window.confirm('Delete fingerprint #' + fingerprintNumber + '?');
+      if (!confirmed) {
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request('/api/delete-fingerprint', {
+          method: 'POST',
+          body: { fpNumber: fingerprintNumber },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runRenameFingerprint(fpNumber, currentName) {
+      if (busy) {
+        return;
+      }
+
+      const fingerprintNumber = (fpNumber || '').trim();
+      if (!fingerprintNumber) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Fingerprint number is required';
+        return;
+      }
+
+      const nextName = await promptForName({
+        eyebrow: 'Fingerprint',
+        title: 'Rename Fingerprint',
+        copy: 'Choose a local label for fingerprint #' + fingerprintNumber + '.',
+        value: currentName || '',
+        placeholder: 'Fingerprint name',
+        confirmText: 'Save',
+      });
+      if (nextName === null) {
+        return;
+      }
+
+      const trimmedName = nextName.trim();
+      if (!trimmedName) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Fingerprint name is required';
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request('/api/rename-fingerprint', {
+          method: 'POST',
+          body: {
+            fpNumber: fingerprintNumber,
+            name: trimmedName,
+          },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runResetAction() {
+      if (busy) {
+        return;
+      }
+      showResetLockModal();
+    }
+
+    async function runInitLock(address) {
+      if (busy) {
+        return;
+      }
+      setBusy(true);
+      errorBox.style.display = 'block';
+      errorBox.textContent = 'Starting init for ' + (address || 'selected lock') + '...';
+      try {
+        const response = await request('/api/init-lock', {
+          method: 'POST',
+          body: { address },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, false);
+      }
+    }
+
+    async function runSelectLock(address) {
+      if (busy) {
+        return;
+      }
+      setBusy(true);
+      try {
+        const response = await request('/api/select-lock', {
+          method: 'POST',
+          body: { address },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runDeleteLock(address) {
+      if (busy) {
+        return;
+      }
+      const lockAddress = (address || '').trim();
+      if (!lockAddress) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Lock address is required';
+        return;
+      }
+
+      const confirmed = window.confirm(
+        'Delete saved lock ' + lockAddress + ' from Web UI?\n\nThis only removes the saved config from lockData.json. It does not reset the physical device.'
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request('/api/delete-lock', {
+          method: 'POST',
+          body: { address: lockAddress },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runRenameLock(address, currentName) {
+      if (busy) {
+        return;
+      }
+      const lockAddress = (address || '').trim();
+      if (!lockAddress) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Lock address is required';
+        return;
+      }
+
+      const nextName = await promptForName({
+        eyebrow: 'Saved Lock',
+        title: 'Rename Lock',
+        copy: 'Choose a friendly name for ' + lockAddress + '.',
+        value: currentName || '',
+        placeholder: 'Lock name',
+        confirmText: 'Save',
+      });
+      if (nextName === null) {
+        return;
+      }
+
+      const trimmedName = nextName.trim();
+      if (!trimmedName) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Lock name is required';
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request('/api/rename-lock', {
+          method: 'POST',
+          body: {
+            address: lockAddress,
+            name: trimmedName,
+          },
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runImportLockDataFromFile(file) {
+      if (busy) {
+        return;
+      }
+      if (!file) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        'Import lockData.json and replace the current saved locks?\n\nThis updates the local Web UI config only. It does not reset any physical device.'
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      let parsed;
+      try {
+        const text = await file.text();
+        parsed = JSON.parse(text);
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Invalid JSON file';
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const response = await request('/api/import-lockdata', {
+          method: 'POST',
+          body: Array.isArray(parsed) ? { lockData: parsed } : parsed,
+        });
+        render(response.state || {});
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      } finally {
+        setBusy(false);
+        importLockDataInput.value = '';
+        await refreshStatus(false, true);
+      }
+    }
+
+    async function runExportLockData() {
+      if (busy) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/export-lockdata');
+        if (!response.ok) {
+          let message = 'Export failed';
+          try {
+            const payload = await response.json();
+            message = payload.error || message;
+          } catch (_error) {}
+          throw new Error(message);
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const match = disposition.match(/filename=\"([^\"]+)\"/i);
+        const fileName = match?.[1] || 'ttlock-lockData.json';
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = error.message || String(error);
+      }
+    }
+
+    document.getElementById('startInitScanBtn').addEventListener('click', () => runAction('/api/init-scan/start'));
+    document.getElementById('stopInitScanBtn').addEventListener('click', () => runAction('/api/init-scan/stop'));
+    document.getElementById('unlockBtn').addEventListener('click', () => runAction('/api/unlock'));
+    document.getElementById('lockBtn').addEventListener('click', () => runAction('/api/lock'));
+    document.getElementById('getPassageBtn').addEventListener('click', () => runAction('/api/get-passage'));
+    document.getElementById('setPassageBtn').addEventListener('click', () => runActionWithBody('/api/set-passage', buildPassagePayload()));
+    document.getElementById('deletePassageBtn').addEventListener('click', () => runActionWithBody('/api/delete-passage', buildPassagePayload()));
+    document.getElementById('clearPassageBtn').addEventListener('click', () => runAction('/api/clear-passage'));
+    document.getElementById('addPasscodeBtn').addEventListener('click', () => runActionWithBody('/api/add-passcode', {
+      passCode: passCodeValue.value.trim(),
+      startDate: passCodeStart.value.trim(),
+      endDate: passCodeEnd.value.trim(),
+      type: 1,
+    }));
+    document.getElementById('getPasscodesBtn').addEventListener('click', () => runAction('/api/get-passcodes'));
+    document.getElementById('deletePasscodeBtn').addEventListener('click', () => runActionWithBody('/api/delete-passcode', {
+      passCode: passCodeDeleteValue.value.trim(),
+      type: 1,
+    }));
+    document.getElementById('addFingerprintBtn').addEventListener('click', () => runFingerprintAction());
+    document.getElementById('getFingerprintsBtn').addEventListener('click', () => runAction('/api/get-fingerprints'));
+    document.getElementById('deleteFingerprintBtn').addEventListener('click', () => runDeleteFingerprint(fpDeleteNumber.value));
+    document.getElementById('resetLockBtn').addEventListener('click', () => runResetAction());
+    document.getElementById('refreshBtn').addEventListener('click', () => runAction('/api/refresh'));
+    document.getElementById('reconnectBtn').addEventListener('click', () => runAction('/api/reconnect'));
+    exportLockDataBtn.addEventListener('click', () => {
+      runExportLockData();
+    });
+    importLockDataBtn.addEventListener('click', () => {
+      if (!busy) {
+        importLockDataInput.click();
+      }
+    });
+    importLockDataInput.addEventListener('change', async (event) => {
+      const file = event.target?.files?.[0];
+      await runImportLockDataFromFile(file);
+    });
+    cancelResetLockBtn.addEventListener('click', () => hideResetLockModal());
+    confirmResetLockBtn.addEventListener('click', async () => {
+      hideResetLockModal();
+      await runAction('/api/reset-lock');
+    });
+    cancelRenameBtn.addEventListener('click', () => resolveRenameModal(null));
+    confirmRenameBtn.addEventListener('click', () => {
+      resolveRenameModal(renameModalInput.value);
+    });
+    cancelFingerprintBtn.addEventListener('click', () => {
+      cancelFingerprintEnrollment();
+    });
+    resetLockModal.addEventListener('click', (event) => {
+      if (event.target === resetLockModal) {
+        hideResetLockModal();
+      }
+    });
+    renameModal.addEventListener('click', (event) => {
+      if (event.target === renameModal) {
+        resolveRenameModal(null);
+      }
+    });
+    renameModalInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        resolveRenameModal(renameModalInput.value);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        resolveRenameModal(null);
+      }
+    });
+    discoveredLocks.addEventListener('click', (event) => {
+      const button = event.target.closest('.init-lock-btn');
+      if (!button) {
+        return;
+      }
+      runInitLock(button.getAttribute('data-address') || '');
+    });
+    managedLocks.addEventListener('click', (event) => {
+      const selectButton = event.target.closest('.select-lock-btn');
+      if (selectButton) {
+        runSelectLock(selectButton.getAttribute('data-address') || '');
+        return;
+      }
+      const renameButton = event.target.closest('.rename-lock-btn');
+      if (renameButton) {
+        runRenameLock(
+          renameButton.getAttribute('data-address') || '',
+          renameButton.getAttribute('data-name') || ''
+        );
+        return;
+      }
+      const deleteButton = event.target.closest('.delete-lock-btn');
+      if (deleteButton) {
+        runDeleteLock(deleteButton.getAttribute('data-address') || '');
+      }
+    });
+    fingerprints.addEventListener('click', (event) => {
+      const renameButton = event.target.closest('.rename-fingerprint-btn');
+      if (renameButton) {
+        const fpNumber = renameButton.getAttribute('data-fp-number') || '';
+        runRenameFingerprint(fpNumber, renameButton.getAttribute('data-name') || '');
+        return;
+      }
+      const button = event.target.closest('.delete-fingerprint-btn');
+      if (!button) {
+        return;
+      }
+      const fpNumber = button.getAttribute('data-fp-number') || '';
+      fpDeleteNumber.value = fpNumber;
+      runDeleteFingerprint(fpNumber);
+    });
+    passcodes.addEventListener('click', (event) => {
+      const button = event.target.closest('.delete-passcode-btn');
+      if (!button) {
+        return;
+      }
+      const passCode = button.getAttribute('data-passcode') || '';
+      const type = Number(button.getAttribute('data-type') || 1);
+      passCodeDeleteValue.value = passCode;
+      runActionWithBody('/api/delete-passcode', {
+        passCode,
+        type,
+      });
+    });
+    passageModes.addEventListener('click', (event) => {
+      const button = event.target.closest('.delete-passage-item-btn');
+      if (!button) {
+        return;
+      }
+      passageType.value = String(Number(button.getAttribute('data-type') || 1));
+      passageWeekOrDay.value = button.getAttribute('data-week-or-day') || '';
+      passageMonth.value = button.getAttribute('data-month') || '';
+      passageStartHour.value = button.getAttribute('data-start-hour') || '';
+      passageEndHour.value = button.getAttribute('data-end-hour') || '';
+      runActionWithBody('/api/delete-passage', buildPassagePayload());
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refreshStatus(false, true).catch(() => {});
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      refreshStatus(false, true).catch(() => {});
+    });
+
+    refreshStatus(false, true);
+    startStatusPolling();
+  </script>
+</body>
+</html>

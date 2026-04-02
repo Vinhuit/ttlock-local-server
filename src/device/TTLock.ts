@@ -75,7 +75,7 @@ export class TTLock extends TTLockApi implements TTLock {
     return this.rssi;
   }
 
-  async connect(skipDataRead: boolean = false, timeout: number = 15): Promise<boolean> {
+  async connect(skipDataRead?: boolean, timeout: number = 15): Promise<boolean> {
     if (this.connecting) {
       console.log("Connect allready in progress");
       return false;
@@ -84,22 +84,32 @@ export class TTLock extends TTLockApi implements TTLock {
       return true;
     }
     this.connecting = true;
-    this.skipDataRead = skipDataRead;
-    const connected = await this.device.connect();
-    let timeoutCycles = timeout * 10;
-    if (connected) {
-      console.log("Lock waiting for connection to be completed");
-      do {
-        await sleep(100);
-        timeoutCycles--;
-      } while (!this.connected && timeoutCycles > 0 && this.connecting);
-    } else {
-      console.log("Lock connect failed");
+    if (typeof skipDataRead == "undefined") {
+      skipDataRead = this.initialized && this.isPaired();
     }
-    this.skipDataRead = false;
-    this.connecting = false;
+    this.skipDataRead = skipDataRead;
+    try {
+      const connected = await this.device.connect();
+      let timeoutCycles = timeout * 10;
+      if (connected) {
+        console.log("Lock waiting for connection to be completed");
+        do {
+          await sleep(100);
+          timeoutCycles--;
+        } while (!this.connected && timeoutCycles > 0 && this.connecting);
+      } else {
+        console.log("Lock connect failed");
+      }
+    } finally {
+      this.skipDataRead = false;
+      this.connecting = false;
+    }
     // it is possible that even tho device initially connected, reading initial data will disconnect
     return this.connected;
+  }
+
+  async connectFast(timeout: number = 5): Promise<boolean> {
+    return this.connect(true, timeout);
   }
 
   isConnected(): boolean {
@@ -160,6 +170,22 @@ export class TTLock extends TTLockApi implements TTLock {
 
   hasNewEvents(): boolean {
     return this.newEvents;
+  }
+
+  private async ensureFeatureListLoaded(): Promise<void> {
+    if (typeof this.featureList != "undefined") {
+      return;
+    }
+
+    if (!this.initialized) {
+      return;
+    }
+
+    if (!this.isConnected()) {
+      throw new Error("Lock is not connected");
+    }
+
+    this.featureList = await this.searchDeviceFeatureCommand();
   }
 
   /**
@@ -1038,6 +1064,8 @@ export class TTLock extends TTLockApi implements TTLock {
       throw new Error("Lock is in pairing mode");
     }
 
+    await this.ensureFeatureListLoaded();
+
     if (!this.hasFingerprint()) {
       throw new Error("No fingerprint support");
     }
@@ -1053,8 +1081,17 @@ export class TTLock extends TTLockApi implements TTLock {
         console.log("========= add Fingerprint");
         const fpNumber = await this.addFRCommand();
         console.log("========= updating Fingerprint", fpNumber);
-        const response = await this.updateFRCommand(fpNumber, startDate, endDate);
-        console.log("========= updating Fingerprint", response);
+        try {
+          const response = await this.updateFRCommand(fpNumber, startDate, endDate);
+          console.log("========= updating Fingerprint", response);
+        } catch (error) {
+          console.error("Update FR reported an error, checking fingerprint list", error);
+          const fingerprints = await this.getFingerprints();
+          if (!fingerprints.some((fingerprint) => fingerprint.fpNumber === fpNumber)) {
+            throw error;
+          }
+          console.log("========= updating Fingerprint fallback success", fpNumber);
+        }
         data = fpNumber;
       }
     } catch (error) {
@@ -1074,6 +1111,8 @@ export class TTLock extends TTLockApi implements TTLock {
     if (!this.initialized) {
       throw new Error("Lock is in pairing mode");
     }
+
+    await this.ensureFeatureListLoaded();
 
     if (!this.hasFingerprint()) {
       throw new Error("No fingerprint support");
@@ -1108,6 +1147,8 @@ export class TTLock extends TTLockApi implements TTLock {
       throw new Error("Lock is in pairing mode");
     }
 
+    await this.ensureFeatureListLoaded();
+
     if (!this.hasFingerprint()) {
       throw new Error("No fingerprint support");
     }
@@ -1140,6 +1181,8 @@ export class TTLock extends TTLockApi implements TTLock {
       throw new Error("Lock is in pairing mode");
     }
 
+    await this.ensureFeatureListLoaded();
+
     if (!this.hasFingerprint()) {
       throw new Error("No fingerprint support");
     }
@@ -1171,6 +1214,8 @@ export class TTLock extends TTLockApi implements TTLock {
     if (!this.initialized) {
       throw new Error("Lock is in pairing mode");
     }
+
+    await this.ensureFeatureListLoaded();
 
     if (!this.hasFingerprint()) {
       throw new Error("No fingerprint support");

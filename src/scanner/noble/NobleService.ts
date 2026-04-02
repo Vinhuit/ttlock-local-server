@@ -32,10 +32,7 @@ export class NobleService implements ServiceInterface {
   }
 
   getUUID(): string {
-    if (this.uuid.length > 4) {
-      return this.uuid.replace("-0000-1000-8000-00805f9b34fb", "").replace("0000", "");
-    }
-    return this.uuid;
+    return normalizeBluetoothUuid(this.uuid);
   }
 
   async discoverCharacteristics(): Promise<Map<string, CharacteristicInterface>> {
@@ -89,4 +86,13 @@ export class NobleService implements ServiceInterface {
   toString(): string {
     return this.service.toString();
   }
+}
+
+function normalizeBluetoothUuid(uuid: string): string {
+  const normalized = uuid.toLowerCase().replace(/-/g, "");
+  const bluetoothBaseUuid = "00001000800000805f9b34fb";
+  if (normalized.length === 32 && normalized.endsWith(bluetoothBaseUuid)) {
+    return normalized.slice(4, 8);
+  }
+  return normalized;
 }

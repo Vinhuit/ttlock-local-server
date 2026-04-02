@@ -6,6 +6,7 @@ import { NobleScanner } from "./noble/NobleScanner";
 import { TTBluetoothDevice } from "../device/TTBluetoothDevice";
 import { DeviceInterface } from "./DeviceInterface";
 import { NobleScannerWebsocket } from "./noble/NobleScannerWebsocket";
+import { BluezDbusScanner } from "./bluezdbus/BluezDbusScanner";
 
 export { ScannerType } from "./ScannerInterface";
 export const TTLockUUIDs: string[] = ["1910", "00001910-0000-1000-8000-00805f9b34fb"];
@@ -24,6 +25,7 @@ export class BluetoothLeService extends EventEmitter implements BluetoothLeServi
   constructor(uuids: string[] = TTLockUUIDs, scannerType: ScannerType = "noble", scannerOptions: ScannerOptions) {
     super();
     this.btDevices = new Map();
+    console.log(`BluetoothLeService using scannerType=${scannerType}`);
     if (scannerType == "noble") {
       this.scanner = new NobleScanner(uuids);
     } else if (scannerType == "noble-websocket") {
@@ -33,6 +35,8 @@ export class BluetoothLeService extends EventEmitter implements BluetoothLeServi
         scannerOptions.websocketAesKey,
         scannerOptions.websocketUsername,
         scannerOptions.websocketPassword);
+    } else if (scannerType == "bluez-dbus") {
+      this.scanner = new BluezDbusScanner(uuids, scannerOptions);
     } else {
       throw "Invalid parameters";
     }

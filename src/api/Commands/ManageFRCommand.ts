@@ -23,7 +23,16 @@ export class ManageFRCommand extends Command {
   private batteryCapacity?: number;
 
   protected processData(): void {
-    if (this.commandData && this.commandData.length > 1) {
+    if (this.commandData && this.commandData.length > 0) {
+      if (this.commandData.length === 1 && this.getResponse() === 0x00 && this.commandData.readUInt8(0) === 0x01) {
+        // Some locks return a short failed-looking payload for an empty fingerprint list.
+        // Treat it as FR_SEARCH with no entries and end-of-sequence.
+        this.batteryCapacity = -1;
+        this.opType = ICOperate.FR_SEARCH;
+        this.sequence = -1;
+        this.fingerprints = [];
+        return;
+      }
       this.batteryCapacity = this.commandData.readUInt8(0);
       this.opType = this.commandData.readUInt8(1);
       switch(this.opType) {
@@ -87,6 +96,13 @@ export class ManageFRCommand extends Command {
           break;
       }
     }
+  }
+
+  isEmptyFingerprintListResponse(): boolean {
+    return this.opType === ICOperate.FR_SEARCH
+      && this.sequence === -1
+      && Array.isArray(this.fingerprints)
+      && this.fingerprints.length === 0;
   }
 
   build(): Buffer {

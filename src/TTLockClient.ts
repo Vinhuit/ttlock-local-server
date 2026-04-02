@@ -1,7 +1,7 @@
 'use strict';
 
 import events from "events";
-import { LockType } from "./constant/Lock";
+import { LockType, LockVersion } from "./constant/Lock";
 import { TTBluetoothDevice } from "./device/TTBluetoothDevice";
 import { TTLock } from "./device/TTLock";
 
@@ -9,6 +9,10 @@ import { BluetoothLeService, TTLockUUIDs, ScannerType } from "./scanner/Bluetoot
 import { ScannerOptions } from "./scanner/ScannerInterface";
 import { TTLockData } from "./store/TTLockData";
 import { sleep } from "./util/timingUtil";
+
+function isVerboseScanLoggingEnabled(): boolean {
+  return process.env.TTLOCK_VERBOSE_SCAN_LOGS === "1";
+}
 
 export interface Settings {
   uuids?: string[];
@@ -25,6 +29,9 @@ export interface TTLockClient {
   on(event: "updatedLockData", listener: () => void): this;
   on(event: "monitorStart", listener: () => void): this;
   on(event: "monitorStop", listener: () => void): this;
+  getLockData(): TTLockData[];
+  getLocks(): TTLock[];
+  getLock(address: string): TTLock | undefined;
 }
 
 export class TTLockClient extends events.EventEmitter implements TTLockClient {
@@ -145,16 +152,36 @@ export class TTLockClient extends events.EventEmitter implements TTLockClient {
     return lockData;
   }
 
+  getLocks(): TTLock[] {
+    return Array.from(this.lockDevices.values());
+  }
+
+  getLock(address: string): TTLock | undefined {
+    const normalizedAddress = address.toUpperCase();
+    for (const [lockAddress, lock] of this.lockDevices) {
+      if (lockAddress.toUpperCase() == normalizedAddress) {
+        return lock;
+      }
+    }
+    return undefined;
+  }
+
   setLockData(newLockData: TTLockData[]): void {
     this.lockData = new Map();
     if (newLockData && newLockData.length > 0) {
       newLockData.forEach((lockData) => {
-        this.lockData.set(lockData.address, lockData);
-        const lock = this.lockDevices.get(lockData.address);
+        const normalizedAddress = String(lockData.address || "").toUpperCase();
+        const normalizedLockData = {
+          ...lockData,
+          address: normalizedAddress,
+        };
+        this.lockData.set(normalizedAddress, normalizedLockData);
+        const lock = this.lockDevices.get(normalizedAddress);
         if (typeof lock != "undefined") {
-          lock.updateLockData(lockData);
+          lock.updateLockData(normalizedLockData);
         }
       });
+      console.log(`TTLockClient loaded ${this.lockData.size} saved lock(s): ${Array.from(this.lockData.keys()).join(", ")}`);
     }
   }
 
@@ -177,8 +204,44 @@ export class TTLockClient extends events.EventEmitter implements TTLockClient {
   }
 
   private onScanResult(device: TTBluetoothDevice): void {
+    const verboseScanLogs = isVerboseScanLoggingEnabled();
+    if (device.lockType == LockType.UNKNOWN) {
+      const savedData = this.lockData.get(device.address);
+      if (verboseScanLogs || savedData) {
+        console.log(`TTLockClient scan result address=${device.address} name=${device.name || ""} lockType=${device.lockType} protocol=${device.protocolType}/${device.protocolVersion}/${device.scene}/${device.groupId}/${device.orgId}`);
+        console.log(`TTLockClient saved lock data ${savedData ? "found" : "missing"} for ${device.address}`);
+      }
+      if (savedData) {
+        const hasExplicitProtocol = Number(savedData.protocolType || 0) > 0 && Number(savedData.protocolVersion || 0) > 0;
+        device.protocolType = Number(savedData.protocolType || 0);
+        device.protocolVersion = Number(savedData.protocolVersion || 0);
+        device.scene = Number(savedData.scene || 0);
+        device.groupId = Number(savedData.groupId || 0);
+        device.orgId = Number(savedData.orgId || 0);
+
+        if (!hasExplicitProtocol) {
+          const looksLikeTtlockV3 =
+            (typeof device.name === "string" && /^P\d+_/i.test(device.name))
+            || Boolean(savedData.privateData?.aesKey);
+          if (looksLikeTtlockV3) {
+            device.protocolType = 5;
+            device.protocolVersion = 3;
+            device.scene = Number(savedData.scene || 1);
+            device.groupId = Number(savedData.groupId || 1);
+            device.orgId = Number(savedData.orgId || 1);
+            console.log(`TTLockClient inferred V3 lock metadata for ${device.address} from saved lock data`);
+          }
+        }
+        LockVersion.getLockType(device);
+        if (device.lockType == LockType.UNKNOWN) {
+          console.log(`TTLockClient could not resolve lockType for ${device.address} name=${device.name || ""} protocol=${device.protocolType}/${device.protocolVersion}/${device.scene}/${device.groupId}/${device.orgId}`);
+        }
+      }
+    }
+
     // Is it a Lock device ?
     if (device.lockType != LockType.UNKNOWN) {
+      console.log(`TTLockClient accepted lock ${device.address} lockType=${device.lockType}`);
 
       if (!this.lockDevices.has(device.address)) {
         const data = this.lockData.get(device.address);

@@ -1146,7 +1146,7 @@ export abstract class TTLockApi extends EventEmitter {
     if (responseEnvelope) {
       responseEnvelope.setAesKey(aesKey);
       cmd = responseEnvelope.getCommand() as ManageFRCommand;
-      if (cmd.getResponse() != CommandResponse.SUCCESS) {
+      if (cmd.getResponse() != CommandResponse.SUCCESS && !cmd.isEmptyFingerprintListResponse()) {
         throw new Error("Failed get FR response");
       }
       this.batteryCapacity = cmd.getBatteryCapacity();

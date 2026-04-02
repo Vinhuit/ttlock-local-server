@@ -3,14 +3,17 @@
 import { EventEmitter } from "events";
 import { DeviceInterface } from "./DeviceInterface";
 
-export type ScannerType = "noble" | "noble-websocket";
+export type ScannerType = "noble" | "noble-websocket" | "bluez-dbus";
 
 export type ScannerOptions = {
   websocketHost?: string,
   websocketPort?: number,
   websocketAesKey?: string,
   websocketUsername?: string,
-  websocketPassword?: string
+  websocketPassword?: string,
+  bluezAdapter?: string,
+  bluezMode?: string,
+  bluezDiscoveryIntervalMs?: number
 }
 
 export type ScannerStateType = "unknown" | "starting" | "scanning" | "stopping" | "stopped";

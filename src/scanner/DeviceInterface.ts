@@ -9,6 +9,7 @@ export interface DeviceInterface extends EventEmitter {
   address: string;
   addressType: string;
   connectable: boolean;
+  connected?: boolean;
   rssi: number;
   mtu: number;
   manufacturerData: Buffer;
@@ -54,6 +55,8 @@ export interface CharacteristicInterface extends EventEmitter {
   read(): Promise<Buffer | undefined>;
   write(data: Buffer, withoutResponse: boolean): Promise<boolean>;
   subscribe(): Promise<void>;
+  unsubscribe?(): Promise<void>;
+  dispose?(): Promise<void>;
   toJSON(asObject: boolean): string | Object;
   toString(): string;
   

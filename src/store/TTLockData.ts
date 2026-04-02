@@ -14,6 +14,16 @@ export interface TTLockPrivateData {
 export interface TTLockData {
   /** MAC address */
   address: string;
+  /** Protocol type from advertising data */
+  protocolType?: number;
+  /** Protocol version from advertising data */
+  protocolVersion?: number;
+  /** Scene from advertising data */
+  scene?: number;
+  /** Group id from advertising data */
+  groupId?: number;
+  /** Organization id from advertising data */
+  orgId?: number;
   /** Battery level */
   battery: number;
   /** Signal */

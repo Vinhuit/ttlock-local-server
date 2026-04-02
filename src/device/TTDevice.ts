@@ -62,11 +62,17 @@ export class TTDevice extends EventEmitter {
     
     Object.getOwnPropertyNames(temp).forEach((key) => {
       if (!excludedKeys.has(key)) {
-        const val = Reflect.get(this, key);
-        if (typeof val != 'undefined' && ((typeof val == "string" && val != "") || typeof val != "string")) {
-          if ((typeof val) == "object") {
-            if (val.length && val.length > 0) {
-              Reflect.set(json, key, val.toString('hex'));
+        const val: any = Reflect.get(this, key) as any;
+        if (typeof val !== 'undefined' && ((typeof val === "string" && val !== "") || typeof val !== "string")) {
+          if (val !== null && typeof val === "object") {
+            // If this is a Buffer, export as hex string when non-empty
+            if (typeof Buffer !== 'undefined' && Buffer.isBuffer(val)) {
+              if (val.length > 0) {
+                Reflect.set(json, key, (val as Buffer).toString('hex'));
+              }
+            } else {
+              // Fallback: include object as-is
+              Reflect.set(json, key, val);
             }
           } else {
             Reflect.set(json, key, val);
