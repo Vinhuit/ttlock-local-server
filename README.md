@@ -14,11 +14,11 @@ This repository now serves the local backend and SDK side:
 - a local Web UI + HTTP backend powered by [`server.js`](./server.js)
 - Linux BLE handling through BlueZ D-Bus
 
-Support the project:
+## ❤️ Support the Project
 
-- Ko-fi: <https://ko-fi.com/vinh541542>
+[![Buy me a coffee on Ko-fi](https://img.shields.io/badge/Buy%20me%20a%20coffee-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/vinh541542)
 
-## At a Glance
+## 🧭 At a Glance
 
 | Area | What it gives you |
 | --- | --- |
@@ -28,7 +28,7 @@ Support the project:
 | Docker | backend deployment on a dedicated BLE host |
 | Linux BLE | BlueZ D-Bus discovery and connect path |
 
-## What This Repo Is
+## 📦 What This Repo Is
 
 TTLock Local is meant for users who want to control TTLock devices without depending entirely on the official cloud app flow.
 
@@ -43,7 +43,7 @@ The local backend can:
 - fetch operation logs
 - expose a simple local HTTP API for Web UI and local integrations
 
-## Main Components
+## 🧩 Main Components
 
 ### 1. SDK
 
@@ -82,7 +82,7 @@ The Home Assistant custom integration is in a separate repository:
 
 - [`Vinhuit/ttlock-local-hass`](https://github.com/Vinhuit/ttlock-local-hass)
 
-## Current Feature Coverage
+## ✅ Current Feature Coverage
 
 Implemented in this repo:
 
@@ -101,7 +101,7 @@ Implemented in this repo:
 - Web UI for local browser control
 - Docker packaging for backend deployment
 
-## Linux Only
+## 🐧 Linux Only
 
 This backend is currently Linux-first.
 
@@ -111,7 +111,7 @@ If you want a Windows-oriented workflow, use the upstream project instead:
 
 - [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
 
-## Requirements
+## 📋 Requirements
 
 - Node.js 12 or newer
 - a working Bluetooth adapter
@@ -124,7 +124,7 @@ Known good targets for this kind of setup:
 - Intel NUC
 - another always-on local machine with BLE
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Install dependencies
 
@@ -150,7 +150,7 @@ Default backend URL:
 http://localhost:8990
 ```
 
-## Backend Files and Persistence
+## 💾 Backend Files and Persistence
 
 Important backend files:
 
@@ -168,7 +168,7 @@ Runtime data:
 
 If you care about not losing keys, back up `lockData.json`.
 
-## Backend Environment Variables
+## ⚙️ Backend Environment Variables
 
 Common backend variables:
 
@@ -187,7 +187,7 @@ Full Docker-oriented examples are documented in:
 - [`DOCKER.md`](./DOCKER.md)
 - [`.env.example`](./.env.example)
 
-## Test the Backend First
+## 🩺 Test the Backend First
 
 Before debugging UI or integrations, verify the backend directly.
 
@@ -215,7 +215,7 @@ GET /api/status
 GET /api/status?wake=1
 ```
 
-## Server API
+## 🔌 Server API
 
 The server routes are documented in:
 
@@ -230,7 +230,7 @@ Main route groups:
 - passcodes
 - passage mode
 
-## Docker
+## 🐳 Docker
 
 Docker support is included.
 
@@ -239,7 +239,7 @@ See:
 - [`Dockerfile`](./Dockerfile)
 - [`DOCKER.md`](./DOCKER.md)
 
-## Pairing Notes
+## 🛠️ Pairing Notes
 
 Pairing is the least stable part of the flow.
 
@@ -255,7 +255,7 @@ On many locks, a hardware reset button exists on the exterior assembly:
 - short press: reboot
 - long press: factory reset
 
-## Monitoring and Events
+## 📡 Monitoring and Events
 
 The backend can monitor advertising data and infer state changes from the params byte.
 
@@ -275,13 +275,13 @@ This is useful for:
 - detecting lock/unlock state changes
 - knowing when operation logs should be refreshed
 
-## Related Repositories
+## 🔗 Related Repositories
 
 - Home Assistant integration:
   [`Vinhuit/ttlock-local-hass`](https://github.com/Vinhuit/ttlock-local-hass)
 - Upstream SDK base:
   [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
 
-## License
+## 📄 License
 
 [GPL-3.0](./LICENSE)
