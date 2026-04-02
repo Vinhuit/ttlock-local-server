@@ -56,12 +56,14 @@ Home Assistant
   -> custom_components/ttlock_local
   -> HTTP
   -> ttlock-local-server
-  -> BLE
+  -> BlueZ D-Bus / BLE
   -> TTLock device
 ```
 
 The integration does not speak Bluetooth directly.  
 It only reads backend state and sends local HTTP commands to the server.
+
+On Linux, the backend architecture can use the BlueZ D-Bus path for BLE discovery and connect handling instead of relying only on the older `noble` flow.
 
 ## Requirements
 
