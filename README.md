@@ -87,10 +87,7 @@ The Home Assistant custom integration is in a separate repository:
 
 Android reference apps are also included in this repository:
 
-<p>
-  <img src="./Android_SDK_Minimal/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Android Minimal app icon" width="72" />
-  <img src="./Android_SDK_Demo/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Android Demo app icon" width="72" />
-</p>
+![Android app preview](./picture/android.png)
 
 - [`Android_SDK_Minimal`](./Android_SDK_Minimal)
   - lighter Android reference app for local TTLock flows
