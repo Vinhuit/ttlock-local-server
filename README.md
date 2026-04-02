@@ -65,6 +65,11 @@ It only reads backend state and sends local HTTP commands to the server.
 
 On Linux, the backend architecture can use the BlueZ D-Bus path for BLE discovery and connect handling instead of relying only on the older `noble` flow.
 
+This Linux BLE architecture is intended for Linux hosts only.  
+If you want a Windows-oriented workflow, switch to the upstream project instead:
+
+- [`kind3r/ttlock-sdk-js`](https://github.com/kind3r/ttlock-sdk-js)
+
 ## Requirements
 
 - Home Assistant `2024.8.0` or newer
