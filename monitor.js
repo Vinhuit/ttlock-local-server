@@ -359,6 +359,7 @@ function getManagedLocks() {
     const device = client?.getLock(address);
     const liveLockData = typeof device?.getLockData === 'function' ? device.getLockData() : savedLock;
     const discovered = discoveredLocks.get(address);
+    const battery = resolveBatteryValue(liveLockData?.battery, savedLock?.battery);
 
     return {
       address,
@@ -370,7 +371,7 @@ function getManagedLocks() {
       connected: typeof device?.isConnected === 'function' ? device.isConnected() : false,
       active: address === targetMac,
       rssi: discovered?.rssi ?? liveLockData?.rssi ?? null,
-      battery: liveLockData?.battery ?? null,
+      battery,
       is_locked: toLockedBoolean(liveLockData?.lockedStatus ?? null),
     };
   }).sort((a, b) => {
@@ -449,6 +450,20 @@ function toLockedBoolean(lockedStatus) {
   return null;
 }
 
+function normalizeBatteryValue(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
+}
+
+function resolveBatteryValue(...candidates) {
+  for (const candidate of candidates) {
+    const normalized = normalizeBatteryValue(candidate);
+    if (normalized !== null) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
 function shouldUseLock(target) {
   const address = normalizeAddress(target?.getAddress?.());
   return Boolean(address) && Boolean(targetMac) && address === targetMac;
@@ -489,15 +504,22 @@ function syncStateFromLock(target) {
 
   const lockData = typeof target.getLockData === 'function' ? target.getLockData() : undefined;
   const json = typeof target.toJSON === 'function' ? target.toJSON(true) : {};
+  const previousManagedLock = getManagedLock(target.getAddress ? target.getAddress() : state.address);
   const nextLocked = toLockedBoolean(
     lockData?.lockedStatus ?? json.lockedStatus ?? null
+  );
+  const battery = resolveBatteryValue(
+    lockData?.battery,
+    json.batteryCapacity,
+    previousManagedLock?.battery,
+    state.battery,
   );
 
   emitState({
     address: target.getAddress ? target.getAddress() : state.address,
     name: target.getName ? target.getName() : state.name,
     connected: typeof target.isConnected === 'function' ? target.isConnected() : state.connected,
-    battery: lockData?.battery ?? json.batteryCapacity ?? state.battery,
+    battery,
     is_locked: nextLocked,
   });
 }
@@ -517,9 +539,11 @@ async function persistLockData() {
     const address = normalizeAddress(item?.address);
     const previous = previousByAddress.get(address) || {};
     const fingerprintCache = getCachedFingerprints(address);
+    const battery = resolveBatteryValue(item?.battery, previous?.battery);
     return {
       ...previous,
       ...item,
+      battery,
       name: previous?.name || item?.name,
       fingerprint_cache: fingerprintCache,
     };

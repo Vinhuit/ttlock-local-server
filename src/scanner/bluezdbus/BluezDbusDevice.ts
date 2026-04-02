@@ -124,9 +124,10 @@ export class BluezDbusDevice extends EventEmitter implements DeviceInterface {
           this.updateFromProperties(changed);
           const isConnected = Boolean(this.connected);
           const servicesResolved = Boolean(getInterfaceValue(changed, "ServicesResolved", false));
-          if (Object.prototype.hasOwnProperty.call(changed || {}, "Connected")
-            || Object.prototype.hasOwnProperty.call(changed || {}, "ServicesResolved")
-            || Object.prototype.hasOwnProperty.call(changed || {}, "RSSI")) {
+          const hasConnectionChange = Object.prototype.hasOwnProperty.call(changed || {}, "Connected");
+          const hasServicesResolvedChange = Object.prototype.hasOwnProperty.call(changed || {}, "ServicesResolved");
+          const hasRssiChange = Object.prototype.hasOwnProperty.call(changed || {}, "RSSI");
+          if (hasConnectionChange || hasServicesResolvedChange || (hasRssiChange && isVerboseScanLoggingEnabled())) {
             console.log(`BlueZ device properties changed address=${this.address || previousName} connected=${isConnected} servicesResolved=${servicesResolved} rssi=${this.rssi}`);
           }
           if (!wasConnected && isConnected) {
